@@ -90,33 +90,17 @@
         html5QrCode = new Html5Qrcode("reader");
       }
 
-      // 1. Configuración de escaneo (cuadros por segundo, área y detector nativo)
       const config = {
         fps: 15,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.80;
-          let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-          return {
-            width: Math.floor(minEdgeSize * minEdgePercentage),
-            height: Math.floor(minEdgeSize * minEdgePercentage)
-          };
-        },
+        qrbox: { width: 280, height: 280 },
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
         }
       };
 
-      // 2. Restricciones de hardware: Cámara trasera obligatoria + Resolución HD + Enfoque
-      const cameraConstraints = {
-        facingMode: "environment",
-        width: { min: 640, ideal: 1280, max: 1920 },
-        height: { min: 480, ideal: 720, max: 1080 },
-        focusMode: "continuous"
-      };
-
-      // Iniciar directo sin pedir selección de cámara
+      // Iniciar directamente con la cámara trasera ('environment') en HD
       html5QrCode.start(
-        cameraConstraints,
+        { facingMode: "environment" },
         config,
         alDetectarQR
       ).catch(err => {
