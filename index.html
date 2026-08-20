@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
-  <!-- Librería para escanear QR desde el navegador -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body { 
@@ -35,7 +33,6 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
-    /* Estilo para el logo de 3DM */
     .brand-logo {
       width: 140px;
       height: auto;
@@ -58,15 +55,12 @@
       border: none !important;
     }
 
-    /* REGLAS ESTRICTAS PARA OCULTAR LA OPCIÓN DE ARCHIVO DE IMAGEN */
+    /* Oculta por completo la opción de subir archivos y menús innecesarios */
     #reader__dashboard_section_swaplink,
     #reader__filescan_input,
-    a[href="#scan-using-file"] {
+    #reader__camera_selection,
+    #reader select {
       display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      height: 0 !important;
-      pointer-events: none !important;
     }
 
     #media-container { 
@@ -110,7 +104,6 @@
 <body>
 
   <div class="app-card">
-    <!-- Logo 3DM -->
     <img src="logo.png" alt="3DM Logo" class="brand-logo">
     <h1>US States History</h1>
     
@@ -154,7 +147,9 @@
     let ytPlayer;
 
     function alDetectarQR(qrCodeMessage) {
-      html5QrcodeScanner.clear();
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
+      }
       document.getElementById('reader').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
@@ -207,7 +202,7 @@
       }
     }
 
-    function iniciarEscaner() {
+    function iniciarEscanerDirecto() {
       document.getElementById('reader').style.display = 'block';
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
@@ -235,22 +230,31 @@
 
       html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
       html5QrcodeScanner.render(alDetectarQR);
+    }
 
-      // Intervalo continuo para presionar el botón de permisos apenas la librería lo renderice en el DOM
-      const autoClickInterval = setInterval(() => {
-        const btnPermisos = document.querySelector("#reader__camera_permission_button");
-        if (btnPermisos) {
-          btnPermisos.click();
-          clearInterval(autoClickInterval);
-        }
-      }, 50);
+    function solicitarPermisosYArrancar() {
+      // Solicita permiso de cámara nativo de inmediato al abrir la página
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+          .then((stream) => {
+            // Detenemos el stream temporal de prueba y arrancamos la librería
+            stream.getTracks().forEach(track => track.stop());
+            iniciarEscanerDirecto();
+          })
+          .catch((err) => {
+            console.log("Permiso denegado o no disponible:", err);
+            iniciarEscanerDirecto();
+          });
+      } else {
+        iniciarEscanerDirecto();
+      }
     }
 
     function reiniciarEscaner() {
-      iniciarEscaner();
+      iniciarEscanerDirecto();
     }
 
-    window.onload = iniciarEscaner;
+    window.onload = solicitarPermisosYArrancar;
   </script>
 </body>
 </html>
