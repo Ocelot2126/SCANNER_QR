@@ -27,29 +27,28 @@
 
   <script>
     // 1. Mapeo entre la URL del QR (Wikipedia) y el contenido multimedia
-    // 1. Mapeo entre la URL del QR (Wikipedia) y el contenido multimedia
-const mapaContenido = {
-  "https://es.wikipedia.org/wiki/Historia_de_Texas": {
-    tipo: "youtube",
-    id: "dQw4w9WgXcQ",
-    titulo: "Historia de Texas"
-  },
-  "https://en.wikipedia.org/wiki/California": {
-    tipo: "youtube",
-    id: "iNni60n2qIE",
-    titulo: "California"
-  },
-  "https://en.wikipedia.org/wiki/California/": { // Por si el QR tiene una barra al final
-    tipo: "youtube",
-    id: "iNni60n2qIE",
-    titulo: "California"
-  },
-  "https://es.wikipedia.org/wiki/Historia_de_California": {
-    tipo: "audio",
-    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    titulo: "Audio: Historia de California"
-  }
-};
+    const mapaContenido = {
+      "https://es.wikipedia.org/wiki/Historia_de_Texas": {
+        tipo: "youtube",
+        id: "dQw4w9WgXcQ",
+        titulo: "Historia de Texas"
+      },
+      "https://en.wikipedia.org/wiki/California": {
+        tipo: "youtube",
+        id: "iNni60n2qIE",
+        titulo: "California"
+      },
+      "https://en.wikipedia.org/wiki/California/": {
+        tipo: "youtube",
+        id: "iNni60n2qIE",
+        titulo: "California"
+      },
+      "https://es.wikipedia.org/wiki/Historia_de_California": {
+        tipo: "audio",
+        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        titulo: "Audio: Historia de California"
+      }
+    };
 
     let html5QrcodeScanner;
 
@@ -58,7 +57,10 @@ const mapaContenido = {
       html5QrcodeScanner.clear();
       document.getElementById('reader').style.display = 'none';
 
-      const datos = mapaContenido[qrCodeMessage];
+      // Normalizar la URL leída eliminando espacios
+      const urlLimpia = qrCodeMessage.trim();
+      const datos = mapaContenido[urlLimpia];
+
       const container = document.getElementById('media-container');
       const title = document.getElementById('media-title');
       const wrapper = document.getElementById('player-wrapper');
@@ -80,7 +82,7 @@ const mapaContenido = {
         }
       } else {
         title.innerText = "Contenido no registrado";
-        wrapper.innerHTML = `<p>El QR leído (${qrCodeMessage}) no está configurado en la base de datos.</p>`;
+        wrapper.innerHTML = `<p>El QR leído (${urlLimpia}) no está configurado en la base de datos.</p>`;
       }
     }
 
@@ -89,7 +91,7 @@ const mapaContenido = {
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
 
-      // Configuración avanzada de la cámara para QR pequeños y mejor enfoque
+      // Configuración de escaneo optimizada para cámara trasera y lecturas pequeñas
       const config = {
         fps: 15,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
@@ -104,10 +106,10 @@ const mapaContenido = {
           useBarCodeDetectorIfSupported: true
         },
         videoConstraints: {
-          facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 },
+          facingMode: "environment", // Fuerza la cámara trasera
+          width: { min: 640, ideal: 1280, max: 1920 }, // Resolución HD para QR pequeños
           height: { min: 480, ideal: 720, max: 1080 },
-          focusMode: "continuous"
+          focusMode: "continuous" // Fuerza enfoque continuo
         }
       };
 
