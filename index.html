@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lector QR Interactivos</title>
+  <!-- Librería para escanear QR desde el navegador -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; text-align: center; padding: 20px; margin: 0; background: #f4f4f9; }
+    #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; }
+    #media-container { margin-top: 20px; display: none; }
+    iframe, audio { width: 100%; max-width: 400px; border-radius: 8px; }
+    button { padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+  <h2>Escáner de Historia</h2>
+  <div id="reader"></div>
+
+  <div id="media-container">
+    <h3 id="media-title"></h3>
+    <div id="player-wrapper"></div>
+    <button onclick="reiniciarEscaner()">Escanear otro QR</button>
+  </div>
+
+  <script>
+    // 1. Mapeo entre la URL del QR (Wikipedia) y el contenido multimedia
+    const mapaContenido = {
+      "https://es.wikipedia.org/wiki/Historia_de_Texas": {
+        tipo: "youtube",
+        id: "dQw4w9WgXcQ", // ID del video de YouTube
+        titulo: "Historia de Texas"
+      },
+      "https://es.wikipedia.org/wiki/Historia_de_California": {
+        tipo: "audio",
+        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // URL de prueba de audio
+        titulo: "Audio: Historia de California"
+      }
+    };
+
+    let html5QrcodeScanner;
+
+    function alDetectarQR(qrCodeMessage) {
+      // Detener el escáner al detectar un código válido
+      html5QrcodeScanner.clear();
+      document.getElementById('reader').style.display = 'none';
+
+      const datos = mapaContenido[qrCodeMessage];
+      const container = document.getElementById('media-container');
+      const title = document.getElementById('media-title');
+      const wrapper = document.getElementById('player-wrapper');
+
+      container.style.display = 'block';
+
+      if (datos) {
+        title.innerText = datos.titulo;
+        
+        if (datos.tipo === "youtube") {
+          wrapper.innerHTML = `
+            <iframe height="225" src="https://www.youtube.com/embed/${datos.id}?autoplay=1" 
+                    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+          `;
+        } else if (datos.tipo === "audio") {
+          wrapper.innerHTML = `
+            <audio controls autoplay src="${datos.url}"></audio>
+          `;
+        }
+      } else {
+        title.innerText = "Contenido no registrado";
+        wrapper.innerHTML = `<p>El QR leído (${qrCodeMessage}) no está configurado en la base de datos.</p>`;
+      }
+    }
+
+    function iniciarEscaner() {
+      document.getElementById('reader').style.display = 'block';
+      document.getElementById('media-container').style.display = 'none';
+      document.getElementById('player-wrapper').innerHTML = '';
+
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      html5QrcodeScanner.render(alDetectarQR);
+    }
+
+    function reiniciarEscaner() {
+      iniciarEscaner();
+    }
+
+    // Inicializar al cargar la página
+    window.onload = iniciarEscaner;
+  </script>
+</body>
+</html>
