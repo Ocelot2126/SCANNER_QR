@@ -262,27 +262,29 @@
       document.getElementById('player-wrapper').innerHTML = '';
       document.getElementById('wiki-container').innerHTML = '';
 
-      // Configuración optimizada para alta densidad de píxeles y QR pequeños
       const config = {
-        fps: 30, // Mayor tasa de refresco para capturas más rápidas
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.85; // Visor más amplio para no recortar códigos chicos
-          let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-          return {
-            width: Math.floor(minEdgeSize * minEdgePercentage),
-            height: Math.floor(minEdgeSize * minEdgePercentage)
-          };
-        },
+        fps: 30,
+        // Al quitar el qrbox limitado, escanea todo el campo de visión de la cámara
+        // como lo hace el lector nativo de Android
+        qrbox: undefined, 
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true // Decodificación nativa por hardware
+          useBarCodeDetectorIfSupported: true // Aprovecha la API 'BarcodeDetector' nativa de Android/Chrome
         },
         videoConstraints: {
-          facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 }, // Fuerza la resolución HD para mayor nitidez
-          height: { min: 480, ideal: 720, max: 1080 },
-          focusMode: "continuous"
+          facingMode: { exact: "environment" }, // Fuerza el uso del sensor trasero principal (evita lentes gran angular secundarias de baja resolución)
+          width: { ideal: 1920 }, // Exige Full HD para máxima densidad de puntos en QR pequeños
+          height: { ideal: 1080 },
+          focusMode: "continuous",
+          advanced: [
+            { zoom: true }, // Solicita permiso de zoom dinámico al hardware
+            { exposureMode: "continuous" } // Ajuste de iluminación en tiempo real
+          ]
         }
       };
+
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
+      html5QrcodeScanner.render(alDetectarQR);
+    }
 
       html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
       html5QrcodeScanner.render(alDetectarQR);
