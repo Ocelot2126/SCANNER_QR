@@ -58,16 +58,6 @@
       border: none !important;
     }
 
-    /* Estilos para distanciar el texto/botón de Scan an Image File */
-    #reader__dashboard_section_swaplink {
-      margin-top: 18px !important;
-      display: inline-block !important;
-    }
-
-    #reader button {
-      margin-bottom: 8px !important;
-    }
-
     #media-container { 
       margin-top: 20px; 
       display: none; 
@@ -211,10 +201,11 @@
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
 
+      // Configuración optimizada para alta densidad de píxeles y QR pequeños
       const config = {
-        fps: 30,
+        fps: 30, // Mayor tasa de refresco para capturas más rápidas
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.85;
+          let minEdgePercentage = 0.85; // Visor más amplio para no recortar códigos chicos
           let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
           return {
             width: Math.floor(minEdgeSize * minEdgePercentage),
@@ -222,11 +213,11 @@
           };
         },
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
+          useBarCodeDetectorIfSupported: true // Decodificación nativa por hardware
         },
         videoConstraints: {
           facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 },
+          width: { min: 640, ideal: 1280, max: 1920 }, // Fuerza la resolución HD para mayor nitidez
           height: { min: 480, ideal: 720, max: 1080 },
           focusMode: "continuous"
         }
