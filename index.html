@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
-  <!-- Librería para escanear QR desde el navegador -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body { 
@@ -16,7 +14,6 @@
       margin: 0; 
       min-height: 100vh;
       box-sizing: border-box;
-      /* Usa la imagen local cargada en tu GitHub */
       background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), 
                   url('background.jpg');
       background-size: cover;
@@ -56,7 +53,11 @@
       border-radius: 12px; 
       overflow: hidden; 
       border: none !important;
-      background: #000;
+    }
+
+    /* Ocultar menú de cámara y textos sobrantes de la librería */
+    #reader select, #reader__dashboard_section_csr, #reader__dashboard_section_swaplink {
+      display: none !important;
     }
 
     #media-container { 
@@ -139,15 +140,14 @@
       }
     };
 
-    let html5QrCode;
+    let html5QrcodeScanner;
     let ytPlayer;
 
     function alDetectarQR(qrCodeMessage) {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-          document.getElementById('reader').style.display = 'none';
-        }).catch(err => console.error(err));
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
       }
+      document.getElementById('reader').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
       const datos = mapaContenido[urlLimpia];
@@ -204,14 +204,10 @@
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
-
       const config = {
         fps: 15,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.80;
+          let minEdgePercentage = 0.85;
           let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
           return {
             width: Math.floor(minEdgeSize * minEdgePercentage),
@@ -220,23 +216,14 @@
         },
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
+        },
+        videoConstraints: {
+          facingMode: "environment" // Fuerza la cámara trasera sin bloquear el navegador
         }
       };
 
-      const cameraConstraints = {
-        facingMode: "environment",
-        width: { min: 640, ideal: 1280, max: 1920 },
-        height: { min: 480, ideal: 720, max: 1080 },
-        focusMode: "continuous"
-      };
-
-      html5QrCode.start(
-        cameraConstraints,
-        config,
-        alDetectarQR
-      ).catch(err => {
-        console.error("Error starting camera:", err);
-      });
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
+      html5QrcodeScanner.render(alDetectarQR);
     }
 
     function reiniciarEscaner() {
