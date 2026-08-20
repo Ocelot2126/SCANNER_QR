@@ -26,34 +26,26 @@
   </div>
 
   <script>
-    // Mapeo de URLs de Wikipedia a videos o audios
+    // 1. Mapeo entre la URL del QR (Wikipedia) y el contenido multimedia
     const mapaContenido = {
       "https://es.wikipedia.org/wiki/Historia_de_Texas": {
         tipo: "youtube",
-        id: "dQw4w9WgXcQ",
+        id: "dQw4w9WgXcQ", // ID del video de YouTube
         titulo: "Historia de Texas"
-      },
-      "https://en.wikipedia.org/wiki/California": {
-        tipo: "youtube",
-        id: "iNni60n2qIE",
-        titulo: "California"
       },
       "https://es.wikipedia.org/wiki/Historia_de_California": {
         tipo: "audio",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // URL de prueba de audio
         titulo: "Audio: Historia de California"
       }
     };
 
-    let html5QrCode;
+    let html5QrcodeScanner;
 
     function alDetectarQR(qrCodeMessage) {
-      // Detener la cámara al detectar un código
-      if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-          document.getElementById('reader').style.display = 'none';
-        }).catch(err => console.error("Error al detener la cámara", err));
-      }
+      // Detener el escáner al detectar un código válido
+      html5QrcodeScanner.clear();
+      document.getElementById('reader').style.display = 'none';
 
       const datos = mapaContenido[qrCodeMessage];
       const container = document.getElementById('media-container');
@@ -82,31 +74,36 @@
     }
 
     function iniciarEscaner() {
-      document.getElementById('reader').style.display = 'block';
-      document.getElementById('media-container').style.display = 'none';
-      document.getElementById('player-wrapper').innerHTML = '';
+  document.getElementById('reader').style.display = 'block';
+  document.getElementById('media-container').style.display = 'none';
+  document.getElementById('player-wrapper').innerHTML = '';
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
-
-      const config = {
-        fps: 15,
-        qrbox: { width: 280, height: 280 },
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
+  // Configuración avanzada de la cámara para QR pequeños y mejor enfoque
+  const config = {
+    fps: 15, // Aumentamos los cuadros por segundo para un escaneo más rápido
+    qrbox: function(viewfinderWidth, viewfinderHeight) {
+      // Ocupa el 80% del visor para no limitar el área de lectura
+      let minEdgePercentage = 0.80;
+      let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+      return {
+        width: Math.floor(minEdgeSize * minEdgePercentage),
+        height: Math.floor(minEdgeSize * minEdgePercentage)
       };
-
-      // Iniciar directamente con la cámara trasera ('environment') en HD
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        alDetectarQR
-      ).catch(err => {
-        console.error("Error al iniciar cámara trasera:", err);
-      });
+    },
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true // Usa la API nativa del teléfono si está disponible (mucho más rápida)
+    },
+    videoConstraints: {
+      facingMode: "environment", // Fuerza la cámara trasera
+      width: { min: 640, ideal: 1280, max: 1920 }, // Fuerza mayor resolución para QRs pequeños
+      height: { min: 480, ideal: 720, max: 1080 },
+      focusMode: "continuous" // Pide enfoque continuo al sistema operativo
     }
+  };
+
+  html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
+  html5QrcodeScanner.render(alDetectarQR);
+}
 
     function reiniciarEscaner() {
       iniciarEscaner();
