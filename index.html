@@ -27,23 +27,29 @@
 
   <script>
     // 1. Mapeo entre la URL del QR (Wikipedia) y el contenido multimedia
-    const mapaContenido = {
-      "https://es.wikipedia.org/wiki/Historia_de_Texas": {
-        tipo: "youtube",
-        id: "dQw4w9WgXcQ", // ID del video de YouTube
-        titulo: "Historia de Texas"
-      },
-      "https://en.wikipedia.org/wiki/California": {
-        tipo: "youtube",
-        id: "iNni60n2qIE", // ID del video de California
-        titulo: "Historia de California"
-      },
-      "https://es.wikipedia.org/wiki/Historia_de_California": {
-        tipo: "audio",
-        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // URL de prueba de audio
-        titulo: "Audio: Historia de California"
-      }
-    };
+    // 1. Mapeo entre la URL del QR (Wikipedia) y el contenido multimedia
+const mapaContenido = {
+  "https://es.wikipedia.org/wiki/Historia_de_Texas": {
+    tipo: "youtube",
+    id: "dQw4w9WgXcQ",
+    titulo: "Historia de Texas"
+  },
+  "https://en.wikipedia.org/wiki/California": {
+    tipo: "youtube",
+    id: "iNni60n2qIE",
+    titulo: "California"
+  },
+  "https://en.wikipedia.org/wiki/California/": { // Por si el QR tiene una barra al final
+    tipo: "youtube",
+    id: "iNni60n2qIE",
+    titulo: "California"
+  },
+  "https://es.wikipedia.org/wiki/Historia_de_California": {
+    tipo: "audio",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    titulo: "Audio: Historia de California"
+  }
+};
 
     let html5QrcodeScanner;
 
