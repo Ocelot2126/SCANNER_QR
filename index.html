@@ -35,7 +35,6 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
-    /* Estilo para el logo de 3DM */
     .brand-logo {
       width: 140px;
       height: auto;
@@ -56,6 +55,12 @@
       border-radius: 12px; 
       overflow: hidden; 
       border: none !important;
+      background: #000;
+    }
+
+    /* Ocultar botones y selectores automáticos de la librería */
+    #reader select, #reader button, #reader__dashboard {
+      display: none !important;
     }
 
     #media-container { 
@@ -99,8 +104,7 @@
 <body>
 
   <div class="app-card">
-    <!-- Logo 3DM -->
-    <img src="LOGO_LARGO.png" alt="3DM Logo" class="brand-logo">
+    <img src="LOGO_LARGO.png" alt="3DM Logo" class="brand-logo" id="main-logo">
     <h1>US States History</h1>
     
     <div id="reader"></div>
@@ -139,12 +143,15 @@
       }
     };
 
-    let html5QrcodeScanner;
+    let html5QrCode;
     let ytPlayer;
 
     function alDetectarQR(qrCodeMessage) {
-      html5QrcodeScanner.clear();
-      document.getElementById('reader').style.display = 'none';
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+          document.getElementById('reader').style.display = 'none';
+        }).catch(err => console.error(err));
+      }
 
       const urlLimpia = qrCodeMessage.trim();
       const datos = mapaContenido[urlLimpia];
@@ -201,29 +208,26 @@
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
 
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
       const config = {
         fps: 15,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.80;
-          let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-          return {
-            width: Math.floor(minEdgeSize * minEdgePercentage),
-            height: Math.floor(minEdgeSize * minEdgePercentage)
-          };
-        },
+        qrbox: { width: 260, height: 260 },
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
-        },
-        videoConstraints: {
-          facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 },
-          focusMode: "continuous"
         }
       };
 
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
-      html5QrcodeScanner.render(alDetectarQR);
+      // Iniciar cámara trasera de forma directa
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        alDetectarQR
+      ).catch(err => {
+        console.error("Error starting camera:", err);
+      });
     }
 
     function reiniciarEscaner() {
