@@ -58,9 +58,15 @@
       border: none !important;
     }
 
-    /* OCULTAR COMPLETAMENTE LA OPCIÓN DE ESCANEAR DESDE ARCHIVO DE IMAGEN */
-    #reader__dashboard_section_swaplink {
+    /* REGLAS ESTRICTAS PARA OCULTAR LA OPCIÓN DE ARCHIVO DE IMAGEN */
+    #reader__dashboard_section_swaplink,
+    #reader__filescan_input,
+    a[href="#scan-using-file"] {
       display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      height: 0 !important;
+      pointer-events: none !important;
     }
 
     #media-container { 
@@ -230,11 +236,12 @@
       html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
       html5QrcodeScanner.render(alDetectarQR);
 
-      // Disparar automáticamente la solicitud de permiso de cámara
-      setTimeout(() => {
+      // Intervalo continuo para presionar el botón de permisos apenas la librería lo renderice en el DOM
+      const autoClickInterval = setInterval(() => {
         const btnPermisos = document.querySelector("#reader__camera_permission_button");
         if (btnPermisos) {
           btnPermisos.click();
+          clearInterval(autoClickInterval);
         }
       }, 50);
     }
