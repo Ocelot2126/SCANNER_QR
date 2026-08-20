@@ -82,13 +82,36 @@
     }
 
     function iniciarEscaner() {
-      document.getElementById('reader').style.display = 'block';
-      document.getElementById('media-container').style.display = 'none';
-      document.getElementById('player-wrapper').innerHTML = '';
+  document.getElementById('reader').style.display = 'block';
+  document.getElementById('media-container').style.display = 'none';
+  document.getElementById('player-wrapper').innerHTML = '';
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
+  // Configuración avanzada de la cámara para QR pequeños y mejor enfoque
+  const config = {
+    fps: 15, // Aumentamos los cuadros por segundo para un escaneo más rápido
+    qrbox: function(viewfinderWidth, viewfinderHeight) {
+      // Ocupa el 80% del visor para no limitar el área de lectura
+      let minEdgePercentage = 0.80;
+      let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+      return {
+        width: Math.floor(minEdgeSize * minEdgePercentage),
+        height: Math.floor(minEdgeSize * minEdgePercentage)
+      };
+    },
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true // Usa la API nativa del teléfono si está disponible (mucho más rápida)
+    },
+    videoConstraints: {
+      facingMode: "environment", // Fuerza la cámara trasera
+      width: { min: 640, ideal: 1280, max: 1920 }, // Fuerza mayor resolución para QRs pequeños
+      height: { min: 480, ideal: 720, max: 1080 },
+      focusMode: "continuous" // Pide enfoque continuo al sistema operativo
+    }
+  };
+
+  html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
+  html5QrcodeScanner.render(alDetectarQR);
+}
 
       const config = {
         fps: 15,
