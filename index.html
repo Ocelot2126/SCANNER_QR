@@ -16,8 +16,9 @@
       margin: 0; 
       min-height: 100vh;
       box-sizing: border-box;
+      /* Usa la imagen local cargada en tu GitHub */
       background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), 
-                  url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1200&auto=format&fit=crop');
+                  url('background.jpg');
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
@@ -99,7 +100,7 @@
 <body>
 
   <div class="app-card">
-    <img src="LOGO_LARGO.png" alt="3DM Logo" class="brand-logo" id="main-logo">
+    <img src="logo.png" alt="3DM Logo" class="brand-logo" id="main-logo">
     <h1>US States History</h1>
     
     <div id="reader"></div>
@@ -207,7 +208,6 @@
         html5QrCode = new Html5Qrcode("reader");
       }
 
-      // Configuración de escaneo optimizada para QR pequeños (80% del visor y detector nativo)
       const config = {
         fps: 15,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
@@ -223,7 +223,6 @@
         }
       };
 
-      // Fuerza cámara trasera ('environment') en HD y con enfoque continuo
       const cameraConstraints = {
         facingMode: "environment",
         width: { min: 640, ideal: 1280, max: 1920 },
