@@ -17,7 +17,7 @@
       min-height: 100vh;
       box-sizing: border-box;
       background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), 
-                  url('background.jpg');
+                  url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1200&auto=format&fit=crop');
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
@@ -56,15 +56,6 @@
       border-radius: 12px; 
       overflow: hidden; 
       border: none !important;
-    }
-
-    /* OCULTA EL SELECTOR DE CÁMARA Y CONTROLES INTERNOS DE LA LIBRERÍA */
-    #reader select, 
-    #reader button, 
-    #reader__dashboard_section_csr, 
-    #reader__dashboard_section_swaplink,
-    #reader__camera_selection {
-      display: none !important;
     }
 
     #media-container { 
@@ -210,10 +201,11 @@
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
 
+      // Configuración optimizada para alta densidad de píxeles y QR pequeños
       const config = {
-        fps: 15,
+        fps: 30, // Mayor tasa de refresco para capturas más rápidas
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.85;
+          let minEdgePercentage = 0.85; // Visor más amplio para no recortar códigos chicos
           let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
           return {
             width: Math.floor(minEdgeSize * minEdgePercentage),
@@ -221,11 +213,11 @@
           };
         },
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
+          useBarCodeDetectorIfSupported: true // Decodificación nativa por hardware
         },
         videoConstraints: {
           facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 },
+          width: { min: 640, ideal: 1280, max: 1920 }, // Fuerza la resolución HD para mayor nitidez
           height: { min: 480, ideal: 720, max: 1080 },
           focusMode: "continuous"
         }
