@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
+  <!-- Librería para escanear QR desde el navegador -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body { 
@@ -15,7 +17,7 @@
       min-height: 100vh;
       box-sizing: border-box;
       background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), 
-                  url('background.jpg');
+                  url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1200&auto=format&fit=crop');
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
@@ -33,6 +35,7 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
+    /* Estilo para el logo de 3DM */
     .brand-logo {
       width: 140px;
       height: auto;
@@ -53,11 +56,6 @@
       border-radius: 12px; 
       overflow: hidden; 
       border: none !important;
-    }
-
-    /* Ocultar menú de cámara y textos sobrantes de la librería */
-    #reader select, #reader__dashboard_section_csr, #reader__dashboard_section_swaplink {
-      display: none !important;
     }
 
     #media-container { 
@@ -101,7 +99,8 @@
 <body>
 
   <div class="app-card">
-    <img src="logo.png" alt="3DM Logo" class="brand-logo" id="main-logo">
+    <!-- Logo 3DM -->
+    <img src="logo.png" alt="3DM Logo" class="brand-logo">
     <h1>US States History</h1>
     
     <div id="reader"></div>
@@ -144,9 +143,7 @@
     let ytPlayer;
 
     function alDetectarQR(qrCodeMessage) {
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
-      }
+      html5QrcodeScanner.clear();
       document.getElementById('reader').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
@@ -207,7 +204,7 @@
       const config = {
         fps: 15,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdgePercentage = 0.85;
+          let minEdgePercentage = 0.80;
           let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
           return {
             width: Math.floor(minEdgeSize * minEdgePercentage),
@@ -218,7 +215,10 @@
           useBarCodeDetectorIfSupported: true
         },
         videoConstraints: {
-          facingMode: "environment" // Fuerza la cámara trasera sin bloquear el navegador
+          facingMode: "environment",
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
+          focusMode: "continuous"
         }
       };
 
