@@ -122,6 +122,8 @@
       border-radius: 10px; 
       margin: 10px 4px; 
       transition: background 0.2s;
+      text-decoration: none;
+      display: inline-block;
     }
 
     .btn:active {
@@ -130,6 +132,12 @@
 
     .btn-fs { 
       background: #16a34a; 
+    }
+
+    .btn-wiki {
+      background: #475569;
+      margin-top: 15px;
+      width: 80%;
     }
   </style>
 </head>
@@ -148,6 +156,7 @@
       <div id="controls" style="margin-top: 15px;">
         <button id="fullscreen-btn" class="btn btn-fs" style="display:none;" onclick="pantallaCompleta()">Full Screen</button>
         <button class="btn" onclick="reiniciarEscaner()">Scan Another QR</button>
+        <div id="wiki-container"></div>
       </div>
     </div>
   </div>
@@ -157,22 +166,26 @@
       "https://es.wikipedia.org/wiki/Historia_de_Texas": {
         tipo: "youtube",
         id: "dQw4w9WgXcQ",
-        titulo: "History of Texas"
+        titulo: "History of Texas",
+        wiki: "https://en.wikipedia.org/wiki/Texas"
       },
       "https://en.wikipedia.org/wiki/California": {
         tipo: "youtube",
         id: "iNni60n2qIE",
-        titulo: "History of California"
+        titulo: "History of California",
+        wiki: "https://en.wikipedia.org/wiki/California"
       },
-      "https://en.wikipedia.org/wiki/Oklahoma": {
+      "https://en.wikipedia.org/wiki/California/": {
         tipo: "youtube",
-        id: "GwJumwenB0",
-        titulo: "History of Oklahoma"
+        id: "iNni60n2qIE",
+        titulo: "History of California",
+        wiki: "https://en.wikipedia.org/wiki/California"
       },
       "https://es.wikipedia.org/wiki/Historia_de_California": {
         tipo: "audio",
         url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        titulo: "Audio: History of California"
+        titulo: "Audio: History of California",
+        wiki: "https://en.wikipedia.org/wiki/California"
       }
     };
 
@@ -190,6 +203,7 @@
       const title = document.getElementById('media-title');
       const wrapper = document.getElementById('player-wrapper');
       const fsBtn = document.getElementById('fullscreen-btn');
+      const wikiWrapper = document.getElementById('wiki-container');
 
       container.style.display = 'block';
 
@@ -213,8 +227,17 @@
           fsBtn.style.display = 'none';
           wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
         }
+
+        // Agregar enlace de Wikipedia si existe en el objeto
+        if (datos.wiki) {
+          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
+        } else {
+          wikiWrapper.innerHTML = '';
+        }
+
       } else {
         fsBtn.style.display = 'none';
+        wikiWrapper.innerHTML = '';
         title.innerText = "Content Not Found";
         wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
       }
@@ -237,6 +260,7 @@
       document.getElementById('reader').style.display = 'block';
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
+      document.getElementById('wiki-container').innerHTML = '';
 
       // Configuración optimizada para alta densidad de píxeles y QR pequeños
       const config = {
