@@ -139,6 +139,7 @@
       margin-top: 15px;
       width: 80%;
     }
+
     /* Estilo para la selección de estados */
     .btn-state-select {
       background: #0f172a;
@@ -232,7 +233,7 @@
           {
             nombre: "New Jersey",
             tipo: "youtube",
-            id: "GMmeyyfW5Cc", // Reemplaza por el ID de YouTube de New Jersey si lo tienes
+            id: "REDUCCION_DE_NJ_ID", // Reemplaza por el ID de YouTube de New Jersey si lo tienes
             titulo: "History of New Jersey",
             wiki: "https://en.wikipedia.org/wiki/New_Jersey"
           }
@@ -311,6 +312,24 @@
       const urlLimpia = qrCodeMessage.trim();
       const datos = mapaContenido[urlLimpia];
 
+      if (datos) {
+        cargarContenido(datos);
+      } else {
+        const container = document.getElementById('media-container');
+        const title = document.getElementById('media-title');
+        const wrapper = document.getElementById('player-wrapper');
+        const fsBtn = document.getElementById('fullscreen-btn');
+        const wikiWrapper = document.getElementById('wiki-container');
+
+        container.style.display = 'block';
+        fsBtn.style.display = 'none';
+        wikiWrapper.innerHTML = '';
+        title.innerText = "Content Not Found";
+        wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
+      }
+    }
+
+    function cargarContenido(datos) {
       const container = document.getElementById('media-container');
       const title = document.getElementById('media-title');
       const wrapper = document.getElementById('player-wrapper');
@@ -318,41 +337,48 @@
       const wikiWrapper = document.getElementById('wiki-container');
 
       container.style.display = 'block';
+      title.innerText = datos.titulo;
+      wrapper.innerHTML = '';
+      wikiWrapper.innerHTML = '';
+      fsBtn.style.display = 'none';
 
-      if (datos) {
-        title.innerText = datos.titulo;
+      if (datos.tipo === "seleccion") {
+        let htmlBotones = '<div style="margin: 15px 0;">';
+        datos.opciones.forEach((opcion, index) => {
+          htmlBotones += `<button class="btn btn-state-select" onclick='seleccionarOpcion(${JSON.stringify(opcion)})'>${opcion.nombre}</button><br>`;
+        });
+        htmlBotones += '</div>';
+        wrapper.innerHTML = htmlBotones;
+
+      } else if (datos.tipo === "youtube") {
+        wrapper.innerHTML = `<div id="yt-player"></div>`;
+        fsBtn.style.display = 'inline-block';
         
-        if (datos.tipo === "youtube") {
-          wrapper.innerHTML = `<div id="yt-player"></div>`;
-          fsBtn.style.display = 'inline-block';
-          
-          ytPlayer = new YT.Player('yt-player', {
-            height: '220',
-            width: '100%',
-            videoId: datos.id,
-            playerVars: {
-              'autoplay': 1,
-              'playsinline': 1
-            }
-          });
-        } else if (datos.tipo === "audio") {
-          fsBtn.style.display = 'none';
-          wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
-        }
+        ytPlayer = new YT.Player('yt-player', {
+          height: '220',
+          width: '100%',
+          videoId: datos.id,
+          playerVars: {
+            'autoplay': 1,
+            'playsinline': 1
+          }
+        });
 
-        // Agregar enlace de Wikipedia si existe en el objeto
         if (datos.wiki) {
           wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
-        } else {
-          wikiWrapper.innerHTML = '';
         }
 
-      } else {
-        fsBtn.style.display = 'none';
-        wikiWrapper.innerHTML = '';
-        title.innerText = "Content Not Found";
-        wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
+      } else if (datos.tipo === "audio") {
+        wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
+
+        if (datos.wiki) {
+          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
+        }
       }
+    }
+
+    function seleccionarOpcion(opcion) {
+      cargarContenido(opcion);
     }
 
     function pantallaCompleta() {
@@ -376,28 +402,25 @@
 
       const config = {
         fps: 30,
-        // Al quitar el qrbox limitado, escanea todo el campo de visión de la cámara
-        // como lo hace el lector nativo de Android
         qrbox: undefined, 
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true // Aprovecha la API 'BarcodeDetector' nativa de Android/Chrome
+          useBarCodeDetectorIfSupported: true
         },
         videoConstraints: {
-          facingMode: { exact: "environment" }, // Fuerza el uso del sensor trasero principal (evita lentes gran angular secundarias de baja resolución)
-          width: { ideal: 1920 }, // Exige Full HD para máxima densidad de puntos en QR pequeños
+          facingMode: { exact: "environment" },
+          width: { ideal: 1920 },
           height: { ideal: 1080 },
           focusMode: "continuous",
           advanced: [
-            { zoom: true }, // Solicita permiso de zoom dinámico al hardware
-            { exposureMode: "continuous" } // Ajuste de iluminación en tiempo real
+            { zoom: true },
+            { exposureMode: "continuous" }
           ]
         }
       };
 
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
       html5QrcodeScanner.render(alDetectarQR);
     }
-
 
     function reiniciarEscaner() {
       iniciarEscaner();
