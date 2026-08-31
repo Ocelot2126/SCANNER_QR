@@ -58,43 +58,6 @@
       border: none !important;
     }
 
-    /* --- REGLAS FORZADAS PARA SEPARACIÓN Y TAMAÑO DE TEXTO --- */
-    
-    /* Contenedor del botón de permisos de cámara */
-    #reader__dashboard_section_csr {
-      margin-bottom: 25px !important;
-      padding-bottom: 10px !important;
-    }
-
-    /* Botón Request Camera Permissions */
-    #reader__camera_permission_button,
-    #reader button {
-      font-size: 18px !important;
-      padding: 12px 24px !important;
-      font-weight: 700 !important;
-      border-radius: 8px !important;
-      cursor: pointer !important;
-    }
-
-    /* Contenedor del enlace "Scan an Image File" */
-    #reader__dashboard_section_swaplink {
-      display: block !important;
-      margin-top: 25px !important;
-      padding-top: 10px !important;
-      clear: both !important;
-    }
-
-    /* Texto e hipervínculo de "Scan an Image File" */
-    #reader__dashboard_section_swaplink a,
-    #reader span a {
-      font-size: 20px !important;
-      font-weight: 800 !important;
-      color: #1d4ed8 !important;
-      text-decoration: underline !important;
-      display: inline-block !important;
-      padding: 8px 12px !important;
-    }
-
     #media-container { 
       margin-top: 20px; 
       display: none; 
@@ -233,7 +196,7 @@
           {
             nombre: "New Jersey",
             tipo: "youtube",
-            id: "GMmeyyfW5Cc", // Reemplaza por el ID de YouTube de New Jersey si lo tienes
+            id: "GMmeyyfW5Cc",
             titulo: "History of New Jersey",
             wiki: "https://en.wikipedia.org/wiki/New_Jersey"
           }
@@ -294,35 +257,35 @@
           {
             nombre: "Massachusetts",
             tipo: "youtube",
-            id: "ID_MASSACHUSETTS", // Reemplaza por el ID de YouTube
+            id: "ID_MASSACHUSETTS",
             titulo: "History of Massachusetts",
             wiki: "https://en.wikipedia.org/wiki/Massachusetts"
           },
           {
             nombre: "Vermont",
             tipo: "youtube",
-            id: "PGhpNdxnWtg", // Reemplaza por el ID de YouTube
+            id: "PGhpNdxnWtg",
             titulo: "History of Vermont",
             wiki: "https://en.wikipedia.org/wiki/Vermont"
           },
           {
             nombre: "New Hampshire",
             tipo: "youtube",
-            id: "ID_NEW_HAMPSHIRE", // Reemplaza por el ID de YouTube
+            id: "ID_NEW_HAMPSHIRE",
             titulo: "History of New Hampshire",
             wiki: "https://en.wikipedia.org/wiki/New_Hampshire"
           },
           {
             nombre: "Rhode Island",
             tipo: "youtube",
-            id: "ID_RHODE_ISLAND", // Reemplaza por el ID de YouTube
+            id: "ID_RHODE_ISLAND",
             titulo: "History of Rhode Island",
             wiki: "https://en.wikipedia.org/wiki/Rhode_Island"
           },
           {
             nombre: "Connecticut",
             tipo: "youtube",
-            id: "ID_CONNECTICUT", // Reemplaza por el ID de YouTube
+            id: "ID_CONNECTICUT",
             titulo: "History of Connecticut",
             wiki: "https://en.wikipedia.org/wiki/Connecticut"
           }
@@ -349,27 +312,25 @@
           {
             nombre: "Maryland",
             tipo: "youtube",
-            id: "ID_MARYLAND", // Reemplaza por el ID de YouTube de Maryland
+            id: "ID_MARYLAND",
             titulo: "History of Maryland",
             wiki: "https://en.wikipedia.org/wiki/Maryland"
           },
           {
             nombre: "Delaware",
             tipo: "youtube",
-            id: "ID_DELAWARE", // Reemplaza por el ID de YouTube de Delaware
+            id: "ID_DELAWARE",
             titulo: "History of Delaware",
             wiki: "https://en.wikipedia.org/wiki/Delaware"
           }
         ]
       }
-      
     };
 
-    let html5QrcodeScanner;
+    let html5QrCode;
     let ytPlayer;
 
     function alDetectarQR(qrCodeMessage) {
-      html5QrcodeScanner.clear();
       document.getElementById('reader').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
@@ -407,7 +368,7 @@
 
       if (datos.tipo === "seleccion") {
         let htmlBotones = '<div style="margin: 15px 0;">';
-        datos.opciones.forEach((opcion, index) => {
+        datos.opciones.forEach((opcion) => {
           htmlBotones += `<button class="btn btn-state-select" onclick='seleccionarOpcion(${JSON.stringify(opcion)})'>${opcion.nombre}</button><br>`;
         });
         htmlBotones += '</div>';
@@ -457,86 +418,83 @@
       }
     }
 
-    // Variable global para controlar la instancia
-let html5QrCode;
+    async function iniciarEscaner() {
+      document.getElementById('reader').style.display = 'block';
+      document.getElementById('media-container').style.display = 'none';
+      document.getElementById('player-wrapper').innerHTML = '';
+      document.getElementById('wiki-container').innerHTML = '';
 
-async function iniciarEscaner() {
-  document.getElementById('reader').style.display = 'block';
-  document.getElementById('media-container').style.display = 'none';
-  document.getElementById('player-wrapper').innerHTML = '';
-  document.getElementById('wiki-container').innerHTML = '';
-
-  // Si ya existía una instancia activa, la detenemos limpiamente
-  if (html5QrCode) {
-    try {
-      await html5QrCode.stop();
-    } catch (e) {
-      // Ignorar si no estaba corriendo
-    }
-  }
-
-  html5QrCode = new Html5Qrcode("reader", {
-    // Activa el detector nativo Chromium si el celular lo soporta
-    useBarCodeDetectorIfSupported: true 
-  });
-
-  // Configuración optimizada para teléfonos modernos
-  const qrConfig = {
-    fps: 15, // Reduce carga de procesamiento en resoluciones altas
-    qrbox: { width: 250, height: 250 },
-    aspectRatio: 1.0
-  };
-
-  // Restricciones estrictas de video para limitar la resolución a 1080p
-  const cameraConstraints = {
-    facingMode: "environment",
-    width: { ideal: 1280, max: 1920 },
-    height: { ideal: 720, max: 1080 }
-  };
-
-  try {
-    await html5QrCode.start(
-      cameraConstraints,
-      qrConfig,
-      (decodedText) => {
-        // Al detectar QR, detenemos la cámara y procesamos la URL
-        html5QrCode.stop().then(() => {
-          alDetectarQR(decodedText);
-        });
-      },
-      (errorMessage) => {
-        // Errores por cuadro no detectado (comportamiento normal)
-      }
-    );
-
-    // --- OPTIMIZACIÓN CLAVE PARA TELÉFONOS NUEVOS ---
-    // Aplicamos zoom de hardware (1.5x) para obligar a usar la distancia focal óptima
-    setTimeout(() => {
-      try {
-        const videoTrack = html5QrCode.getRunningTrackCapabilities();
-        if (videoTrack && videoTrack.zoom) {
-          const targetZoom = Math.min(1.5, videoTrack.zoom.max);
-          html5QrCode.applyVideoConstraints({
-            advanced: [{ zoom: targetZoom }]
-          });
+      // Si ya hay una transmisión corriendo, detenerla antes de reiniciar
+      if (html5QrCode && html5QrCode.isScanning) {
+        try {
+          await html5QrCode.stop();
+        } catch (e) {
+          console.error("Error al detener el escáner:", e);
         }
-      } catch (err) {
-        console.log("Zoom no soportado en este dispositivo:", err);
       }
-    }, 1000);
 
-  } catch (err) {
-    console.error("Error al iniciar cámara:", err);
-    // Fallback si la cámara trasera no responde con constraints estrictos
-    html5QrCode.start(
-      { facingMode: "environment" },
-      qrConfig,
-      (decodedText) => {
-        html5QrCode.stop().then(() => alDetectarQR(decodedText));
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader", {
+          useBarCodeDetectorIfSupported: true 
+        });
       }
-    );
-  }
-}
+
+      const qrConfig = {
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      };
+
+      const cameraConstraints = {
+        facingMode: "environment",
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 }
+      };
+
+      try {
+        await html5QrCode.start(
+          cameraConstraints,
+          qrConfig,
+          async (decodedText) => {
+            // Detener la cámara antes de cambiar la pantalla
+            try {
+              await html5QrCode.stop();
+            } catch (e) {}
+            alDetectarQR(decodedText);
+          },
+          (errorMessage) => {
+            // Cuadro no detectado (normal)
+          }
+        );
+
+        // Forzar zoom 1.5x en cámaras con distancia focal alta
+        setTimeout(() => {
+          try {
+            const videoTrack = html5QrCode.getRunningTrackCapabilities();
+            if (videoTrack && videoTrack.zoom) {
+              const targetZoom = Math.min(1.5, videoTrack.zoom.max);
+              html5QrCode.applyVideoConstraints({
+                advanced: [{ zoom: targetZoom }]
+              });
+            }
+          } catch (err) {
+            console.log("Zoom no soportado:", err);
+          }
+        }, 800);
+
+      } catch (err) {
+        console.error("Error iniciando cámara principal:", err);
+        // Fallback básico si falla la configuración avanzada
+        html5QrCode.start(
+          { facingMode: "environment" },
+          qrConfig,
+          async (decodedText) => {
+            try { await html5QrCode.stop(); } catch (e) {}
+            alDetectarQR(decodedText);
+          }
+        );
+      }
+    }
 
     function reiniciarEscaner() {
       iniciarEscaner();
