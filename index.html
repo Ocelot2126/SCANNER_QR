@@ -1,517 +1,930 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>US States History</title>
+
+  <!-- Librería para escanear QR desde el navegador -->
+
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <!-- API de YouTube -->
+
   <script src="https://www.youtube.com/iframe_api"></script>
+
   <style>
+
     body { 
+
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+
       text-align: center; 
+
       padding: 20px 15px; 
+
       margin: 0; 
+
       min-height: 100vh;
+
       box-sizing: border-box;
+
       background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), 
+
                   url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1200&auto=format&fit=crop');
+
       background-size: cover;
+
       background-position: center;
+
       background-attachment: fixed;
+
       color: #333333;
+
     }
+
 
     .app-card {
+
       background: rgba(255, 255, 255, 0.95);
+
       backdrop-filter: blur(10px);
+
       max-width: 420px;
+
       margin: 20px auto;
+
       padding: 24px 18px;
+
       border-radius: 20px;
+
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
       border: 1px solid rgba(255, 255, 255, 0.4);
+
     }
+
 
     /* Estilo para el logo de 3DM */
+
     .brand-logo {
+
       width: 140px;
+
       height: auto;
+
       margin-bottom: 10px;
+
       display: inline-block;
+
     }
+
 
     h1 {
+
       margin-top: 0;
+
       color: #0f172a;
+
       font-size: 24px;
+
       font-weight: 800;
+
       letter-spacing: -0.5px;
+
     }
+
 
     #reader { 
+
       width: 100%; 
+
       border-radius: 12px; 
+
       overflow: hidden; 
+
       border: none !important;
+
     }
 
-    #cam-select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      background-color: #f8fafc;
-      font-size: 14px;
-      font-weight: 600;
-      color: #1e293b;
-    }
 
     #media-container { 
+
       margin-top: 20px; 
+
       display: none; 
+
     }
+
 
     #player-wrapper { 
+
       width: 100%; 
+
       margin: 0 auto; 
+
     }
+
 
     iframe, audio { 
+
       width: 100%; 
+
       border-radius: 12px; 
+
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+
     }
+
 
     .btn { 
+
       padding: 14px 24px; 
+
       font-size: 16px; 
+
       font-weight: 700; 
+
       cursor: pointer; 
+
       background: #2563eb; 
+
       color: white; 
+
       border: none; 
+
       border-radius: 10px; 
+
       margin: 10px 4px; 
+
       transition: background 0.2s;
+
       text-decoration: none;
+
       display: inline-block;
+
     }
+
 
     .btn:active {
+
       transform: scale(0.98);
+
     }
+
 
     .btn-fs { 
+
       background: #16a34a; 
+
     }
+
 
     .btn-wiki {
+
       background: #475569;
+
       margin-top: 15px;
+
       width: 80%;
+
     }
+
 
     /* Estilo para la selección de estados */
+
     .btn-state-select {
+
       background: #0f172a;
+
       width: 85%;
+
       margin: 8px 0;
+
       font-size: 17px;
+
     }
+
   </style>
+
 </head>
+
 <body>
 
+
   <div class="app-card">
+
+    <!-- Logo 3DM -->
+
     <img src="logo.png" alt="3DM Logo" class="brand-logo">
+
     <h1>US States History</h1>
+
     
+
     <div id="reader"></div>
-    <select id="cam-select" style="display: none;" onchange="cambiarCamara(this.value)"></select>
+
 
     <div id="media-container">
+
       <h2 id="media-title" style="color: #1e293b; font-size: 20px; margin-top: 0;"></h2>
+
       <div id="player-wrapper"></div>
+
       <div id="controls" style="margin-top: 15px;">
+
         <button id="fullscreen-btn" class="btn btn-fs" style="display:none;" onclick="pantallaCompleta()">Full Screen</button>
+
         <button class="btn" onclick="reiniciarEscaner()">Scan Another QR</button>
+
         <div id="wiki-container"></div>
+
       </div>
+
     </div>
+
   </div>
 
+
   <script>
+
     const mapaContenido = {
+
        "https://en.wikipedia.org/wiki/Alaska": {
+
         tipo: "youtube",
+
         id: "xkzs4_araqQ",
+
         titulo: "History of Alaska",
+
         wiki: "https://en.wikipedia.org/wiki/Alaska"
+
       },
+
       "https://en.wikipedia.org/wiki/California": {
+
         tipo: "youtube",
+
         id: "iNni60n2qIE",
+
         titulo: "History of California",
+
         wiki: "https://en.wikipedia.org/wiki/California"
+
       },
+
        "https://en.wikipedia.org/wiki/Florida": {
+
         tipo: "youtube",
+
         id: "OT1fXf9Sr3U",
+
         titulo: "History of Florida",
+
         wiki: "https://en.wikipedia.org/wiki/Florida"
+
       },
+
        "https://en.wikipedia.org/wiki/Georgia_(U.S._state)": {
+
         tipo: "youtube",
+
         id: "Ps7obCFuQBY",
+
         titulo: "History of Georgia",
+
         wiki: "https://en.wikipedia.org/wiki/Georgia_(U.S._state)"
+
       },
+
        "https://en.wikipedia.org/wiki/Hawaii": {
+
         tipo: "youtube",
+
         id: "Zn-68LTOYTQ",
+
         titulo: "History of Hawaii",
+
         wiki: "https://en.wikipedia.org/wiki/Hawaii"
+
       },
+
        "https://en.wikipedia.org/wiki/Illinois": {
+
         tipo: "youtube",
+
         id: "WglHNpATREw",
+
         titulo: "History of Illinois",
+
         wiki: "https://en.wikipedia.org/wiki/Illinois"
+
       },
+
        "https://en.wikipedia.org/wiki/Maine": {
+
         tipo: "youtube",
+
         id: "NfEf3FILJ54",
+
         titulo: "History of Maine",
+
         wiki: "https://en.wikipedia.org/wiki/Maine"
+
       },
+
        "https://en.wikipedia.org/wiki/Michigan": {
+
         tipo: "youtube",
+
         id: "UOyQVuxRBgU",
+
         titulo: "History of Michigan",
+
         wiki: "https://en.wikipedia.org/wiki/Michigan"
+
       },
+
        "https://ocelot2126.github.io/SCANNER_QR/states3.html": {
+
         tipo: "seleccion",
+
         titulo: "Select State",
+
         opciones: [
+
           {
+
             nombre: "New York",
+
             tipo: "youtube",
+
             id: "vNRnNDK6b-w",
+
             titulo: "History of New York",
+
             wiki: "https://en.wikipedia.org/wiki/New_York_(state)"
+
           },
+
           {
+
             nombre: "New Jersey",
+
             tipo: "youtube",
+
             id: "GMmeyyfW5Cc",
+
             titulo: "History of New Jersey",
+
             wiki: "https://en.wikipedia.org/wiki/New_Jersey"
+
           }
+
         ]
+
       },
+
        "https://en.wikipedia.org/wiki/North_Carolina": {
+
         tipo: "youtube",
+
         id: "yScVoJ_qI74",
+
         titulo: "History of North Carolina",
+
         wiki: "https://en.wikipedia.org/wiki/North_Carolina"
+
       },
+
        "https://en.wikipedia.org/wiki/North_Dakota": {
+
         tipo: "youtube",
+
         id: "2HqpXKHBHkU",
+
         titulo: "History of North Dakota",
+
         wiki: "https://en.wikipedia.org/wiki/North_Dakota"
+
       },
+
        "https://en.wikipedia.org/wiki/Ohio": {
+
         tipo: "youtube",
+
         id: "jIeedznFYgs",
+
         titulo: "History of Ohio",
+
         wiki: "https://en.wikipedia.org/wiki/Ohio"
+
       },
+
        "https://en.wikipedia.org/wiki/Oklahoma": {
+
         tipo: "youtube",
+
         id: "uJ7Cmr3MQ8A",
+
         titulo: "History of Oklahoma",
+
         wiki: "https://en.wikipedia.org/wiki/Oklahoma"
+
       },
+
        "https://en.wikipedia.org/wiki/Pennsylvania": {
+
         tipo: "youtube",
+
         id: "8fYEJV1j-vI",
+
         titulo: "History of Pennsylvania",
+
         wiki: "https://en.wikipedia.org/wiki/Pennsylvania"
+
       },
+
        "https://en.wikipedia.org/wiki/South_Carolina": {
+
         tipo: "youtube",
+
         id: "fjwVzQS53fU",
+
         titulo: "History of South Carolina",
+
         wiki: "https://en.wikipedia.org/wiki/South_Carolina"
+
       },
+
       "https://en.wikipedia.org/wiki/South_Dakota": {
+
         tipo: "youtube",
+
         id: "2HqpXKHBHkU",
+
         titulo: "History of South Dakota",
+
         wiki: "https://en.wikipedia.org/wiki/South_Dakota"
+
       },
+
       "https://en.wikipedia.org/wiki/Texas": {
+
         tipo: "youtube",
+
         id: "i3c7L9aFS14",
+
         titulo: "History of Texas",
+
         wiki: "https://en.wikipedia.org/wiki/Texas"
+
       },
+
       "https://ocelot2126.github.io/SCANNER_QR/states1.html": {
+
         tipo: "seleccion",
+
         titulo: "Select State",
+
         opciones: [
+
           {
+
             nombre: "Massachusetts",
+
             tipo: "youtube",
+
             id: "ID_MASSACHUSETTS",
+
             titulo: "History of Massachusetts",
+
             wiki: "https://en.wikipedia.org/wiki/Massachusetts"
+
           },
+
           {
+
             nombre: "Vermont",
+
             tipo: "youtube",
+
             id: "PGhpNdxnWtg",
+
             titulo: "History of Vermont",
+
             wiki: "https://en.wikipedia.org/wiki/Vermont"
+
           },
+
           {
+
             nombre: "New Hampshire",
+
             tipo: "youtube",
+
             id: "ID_NEW_HAMPSHIRE",
+
             titulo: "History of New Hampshire",
+
             wiki: "https://en.wikipedia.org/wiki/New_Hampshire"
+
           },
+
           {
+
             nombre: "Rhode Island",
+
             tipo: "youtube",
+
             id: "ID_RHODE_ISLAND",
+
             titulo: "History of Rhode Island",
+
             wiki: "https://en.wikipedia.org/wiki/Rhode_Island"
+
           },
+
           {
+
             nombre: "Connecticut",
+
             tipo: "youtube",
+
             id: "ID_CONNECTICUT",
+
             titulo: "History of Connecticut",
+
             wiki: "https://en.wikipedia.org/wiki/Connecticut"
+
           }
+
         ]
+
       },
+
       "https://ocelot2126.github.io/SCANNER_QR/states2.html": {
+
         tipo: "seleccion",
+
         titulo: "Select State",
+
         opciones: [
+
           {
+
             nombre: "Virginia",
+
             tipo: "youtube",
+
             id: "2Zsx7seed4Q",
+
             titulo: "History of Virginia",
+
             wiki: "https://en.wikipedia.org/wiki/Virginia"
+
           },
+
           {
+
             nombre: "West Virginia",
+
             tipo: "youtube",
+
             id: "2Zsx7seed4Q",
+
             titulo: "History of West Virginia",
+
             wiki: "https://en.wikipedia.org/wiki/West_Virginia"
+
           },
+
           {
+
             nombre: "Maryland",
+
             tipo: "youtube",
+
             id: "ID_MARYLAND",
+
             titulo: "History of Maryland",
+
             wiki: "https://en.wikipedia.org/wiki/Maryland"
+
           },
+
           {
+
             nombre: "Delaware",
+
             tipo: "youtube",
+
             id: "ID_DELAWARE",
+
             titulo: "History of Delaware",
+
             wiki: "https://en.wikipedia.org/wiki/Delaware"
+
           }
+
         ]
+
       }
+
     };
 
+
     let html5QrCode;
-    let ytPlayer;
 
-    function alDetectarQR(qrCodeMessage) {
-      document.getElementById('reader').style.display = 'none';
-      document.getElementById('cam-select').style.display = 'none';
+let ytPlayer;
 
-      const urlLimpia = qrCodeMessage.trim();
-      const datos = mapaContenido[urlLimpia];
 
-      if (datos) {
-        cargarContenido(datos);
-      } else {
-        const container = document.getElementById('media-container');
-        const title = document.getElementById('media-title');
-        const wrapper = document.getElementById('player-wrapper');
-        const fsBtn = document.getElementById('fullscreen-btn');
-        const wikiWrapper = document.getElementById('wiki-container');
+function alDetectarQR(qrCodeMessage) {
 
-        container.style.display = 'block';
-        fsBtn.style.display = 'none';
-        wikiWrapper.innerHTML = '';
-        title.innerText = "Content Not Found";
-        wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
+  document.getElementById('reader').style.display = 'none';
+
+
+  const urlLimpia = qrCodeMessage.trim();
+
+  const datos = mapaContenido[urlLimpia];
+
+
+  if (datos) {
+
+    cargarContenido(datos);
+
+  } else {
+
+    const container = document.getElementById('media-container');
+
+    const title = document.getElementById('media-title');
+
+    const wrapper = document.getElementById('player-wrapper');
+
+    const fsBtn = document.getElementById('fullscreen-btn');
+
+    const wikiWrapper = document.getElementById('wiki-container');
+
+
+    container.style.display = 'block';
+
+    fsBtn.style.display = 'none';
+
+    wikiWrapper.innerHTML = '';
+
+    title.innerText = "Content Not Found";
+
+    wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
+
+  }
+
+}
+
+
+function cargarContenido(datos) {
+
+  const container = document.getElementById('media-container');
+
+  const title = document.getElementById('media-title');
+
+  const wrapper = document.getElementById('player-wrapper');
+
+  const fsBtn = document.getElementById('fullscreen-btn');
+
+  const wikiWrapper = document.getElementById('wiki-container');
+
+
+  container.style.display = 'block';
+
+  title.innerText = datos.titulo;
+
+  wrapper.innerHTML = '';
+
+  wikiWrapper.innerHTML = '';
+
+  fsBtn.style.display = 'none';
+
+
+  if (datos.tipo === "seleccion") {
+
+    let htmlBotones = '<div style="margin: 15px 0;">';
+
+    datos.opciones.forEach((opcion) => {
+
+      htmlBotones += `<button class="btn btn-state-select" onclick='seleccionarOpcion(${JSON.stringify(opcion)})'>${opcion.nombre}</button><br>`;
+
+    });
+
+    htmlBotones += '</div>';
+
+    wrapper.innerHTML = htmlBotones;
+
+
+  } else if (datos.tipo === "youtube") {
+
+    wrapper.innerHTML = `<div id="yt-player"></div>`;
+
+    fsBtn.style.display = 'inline-block';
+
+    
+
+    ytPlayer = new YT.Player('yt-player', {
+
+      height: '220',
+
+      width: '100%',
+
+      videoId: datos.id,
+
+      playerVars: {
+
+        'autoplay': 1,
+
+        'playsinline': 1
+
       }
+
+    });
+
+
+    if (datos.wiki) {
+
+      wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
+
     }
 
-    function cargarContenido(datos) {
-      const container = document.getElementById('media-container');
-      const title = document.getElementById('media-title');
-      const wrapper = document.getElementById('player-wrapper');
-      const fsBtn = document.getElementById('fullscreen-btn');
-      const wikiWrapper = document.getElementById('wiki-container');
 
-      container.style.display = 'block';
-      title.innerText = datos.titulo;
-      wrapper.innerHTML = '';
-      wikiWrapper.innerHTML = '';
-      fsBtn.style.display = 'none';
+  } else if (datos.tipo === "audio") {
 
-      if (datos.tipo === "seleccion") {
-        let htmlBotones = '<div style="margin: 15px 0;">';
-        datos.opciones.forEach((opcion) => {
-          htmlBotones += `<button class="btn btn-state-select" onclick='seleccionarOpcion(${JSON.stringify(opcion)})'>${opcion.nombre}</button><br>`;
-        });
-        htmlBotones += '</div>';
-        wrapper.innerHTML = htmlBotones;
+    wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
 
-      } else if (datos.tipo === "youtube") {
-        wrapper.innerHTML = `<div id="yt-player"></div>`;
-        fsBtn.style.display = 'inline-block';
-        
-        ytPlayer = new YT.Player('yt-player', {
-          height: '220',
-          width: '100%',
-          videoId: datos.id,
-          playerVars: {
-            'autoplay': 1,
-            'playsinline': 1
-          }
-        });
 
-        if (datos.wiki) {
-          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
-        }
+    if (datos.wiki) {
 
-      } else if (datos.tipo === "audio") {
-        wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
+      wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
 
-        if (datos.wiki) {
-          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
-        }
-      }
     }
 
-    function seleccionarOpcion(opcion) {
-      cargarContenido(opcion);
+  }
+
+}
+
+
+function seleccionarOpcion(opcion) {
+
+  cargarContenido(opcion);
+
+}
+
+
+function pantallaCompleta() {
+
+  const iframe = document.querySelector('#player-wrapper iframe');
+
+  if (iframe) {
+
+    if (iframe.requestFullscreen) {
+
+      iframe.requestFullscreen();
+
+    } else if (iframe.webkitRequestFullscreen) {
+
+      iframe.webkitRequestFullscreen();
+
+    } else if (iframe.msRequestFullscreen) {
+
+      iframe.msRequestFullscreen();
+
     }
 
-    function pantallaCompleta() {
-      const iframe = document.querySelector('#player-wrapper iframe');
-      if (iframe) {
-        if (iframe.requestFullscreen) {
-          iframe.requestFullscreen();
-        } else if (iframe.webkitRequestFullscreen) {
-          iframe.webkitRequestFullscreen();
-        } else if (iframe.msRequestFullscreen) {
-          iframe.msRequestFullscreen();
-        }
-      }
+  }
+
+}
+
+
+async function iniciarEscaner() {
+
+  document.getElementById('reader').style.display = 'block';
+
+  document.getElementById('media-container').style.display = 'none';
+
+  document.getElementById('player-wrapper').innerHTML = '';
+
+  document.getElementById('wiki-container').innerHTML = '';
+
+
+  if (!html5QrCode) {
+
+    html5QrCode = new Html5Qrcode("reader");
+
+  }
+
+
+  // Detener la cámara previa si estaba activa
+
+  if (html5QrCode.isScanning) {
+
+    try {
+
+      await html5QrCode.stop();
+
+    } catch (e) {
+
+      console.warn("No se pudo detener la instancia:", e);
+
     }
 
-    async function iniciarEscaner() {
-      document.getElementById('reader').style.display = 'block';
-      document.getElementById('media-container').style.display = 'none';
-      document.getElementById('player-wrapper').innerHTML = '';
-      document.getElementById('wiki-container').innerHTML = '';
+  }
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
 
-      // 1. Detener flujo de cámara previo de forma segura
-      if (html5QrCode.isScanning) {
-        try {
-          await html5QrCode.stop();
-        } catch (e) {
-          console.warn("No se pudo detener la cámara activa:", e);
-        }
-      }
+  const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
 
-      const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
 
-      // 2. Iniciar la cámara principal directamente (Compatibilidad total con equipos viejos)
+  // Intentar iniciar con la cámara trasera general
+
+  html5QrCode.start(
+
+    { facingMode: "environment" },
+
+    qrConfig,
+
+    async (decodedText) => {
+
       try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          qrConfig,
-          async (decodedText) => {
-            try { await html5QrCode.stop(); } catch (e) {}
-            alDetectarQR(decodedText);
-          },
-          () => {}
-        );
-      } catch (err) {
-        console.error("Error al iniciar cámara primaria:", err);
-        alert("No se pudo acceder a la cámara. Verifica que estés en HTTPS y tengas permisos concedidos.");
-        return;
-      }
 
-      // 3. Enumeración segura de cámaras adicionales (Sólo si el dispositivo lo permite)
+        await html5QrCode.stop();
+
+      } catch (e) {}
+
+      alDetectarQR(decodedText);
+
+    },
+
+    (errorMessage) => {
+
+      // Escaneando cuadros continuamente...
+
+    }
+
+  ).then(() => {
+
+    // Si la cámara inició bien, aplicar el zoom opcionalmente
+
+    setTimeout(() => {
+
       try {
-        const devices = await Html5Qrcode.getCameras();
-        const selectElem = document.getElementById('cam-select');
-        
-        if (selectElem && devices && devices.length > 1) {
-          selectElem.innerHTML = '';
-          devices.forEach((cam, idx) => {
-            const option = document.createElement('option');
-            option.value = cam.id;
-            option.text = cam.label || `Cámara ${idx + 1}`;
-            selectElem.appendChild(option);
+
+        const capabilities = html5QrCode.getRunningTrackCapabilities();
+
+        if (capabilities && capabilities.zoom) {
+
+          html5QrCode.applyVideoConstraints({
+
+            advanced: [{ zoom: Math.min(1.5, capabilities.zoom.max) }]
+
           });
-          selectElem.style.display = 'block';
-        } else if (selectElem) {
-          selectElem.style.display = 'none';
+
         }
+
       } catch (e) {
-        console.log("El dispositivo no soporta la lectura de sensores múltiples.");
-      }
-    }
 
-    async function cambiarCamara(cameraId) {
-      if (html5QrCode && html5QrCode.isScanning) {
-        try {
-          await html5QrCode.stop();
-        } catch (e) {}
-      }
-      
-      html5QrCode.start(
-        cameraId,
-        { fps: 15, qrbox: { width: 250, height: 250 } },
-        async (decodedText) => {
-          try { await html5QrCode.stop(); } catch (e) {}
-          alDetectarQR(decodedText);
-        },
-        () => {}
-      );
-    }
+        console.log("Zoom no disponible en el dispositivo actual.");
 
-    function reiniciarEscaner() {
-      iniciarEscaner();
-    }
+      }
+
+    }, 1000);
+
+  }).catch((err) => {
+
+    console.error("Error al acceder a la cámara:", err);
+
+    alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
+
+  });
+
+}
+
+
+function reiniciarEscaner() {
+
+  iniciarEscaner();
+
+}
+
+
+window.onload = iniciarEscaner;
+
 
     window.onload = iniciarEscaner;
+
   </script>
+
 </body>
-</html>
+
+</html> 
