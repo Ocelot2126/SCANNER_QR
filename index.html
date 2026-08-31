@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
-  <!-- Librería para escanear QR desde el navegador -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- API de YouTube -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body { 
@@ -56,6 +54,18 @@
       border-radius: 12px; 
       overflow: hidden; 
       border: none !important;
+    }
+
+    #cam-select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background-color: #f8fafc;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
     }
 
     #media-container { 
@@ -115,11 +125,11 @@
 <body>
 
   <div class="app-card">
-    <!-- Logo 3DM -->
     <img src="logo.png" alt="3DM Logo" class="brand-logo">
     <h1>US States History</h1>
     
     <div id="reader"></div>
+    <select id="cam-select" style="display: none;" onchange="cambiarCamara(this.value)"></select>
 
     <div id="media-container">
       <h2 id="media-title" style="color: #1e293b; font-size: 20px; margin-top: 0;"></h2>
@@ -328,155 +338,167 @@
     };
 
     let html5QrCode;
-let ytPlayer;
+    let ytPlayer;
 
-function alDetectarQR(qrCodeMessage) {
-  document.getElementById('reader').style.display = 'none';
+    function alDetectarQR(qrCodeMessage) {
+      document.getElementById('reader').style.display = 'none';
+      document.getElementById('cam-select').style.display = 'none';
 
-  const urlLimpia = qrCodeMessage.trim();
-  const datos = mapaContenido[urlLimpia];
+      const urlLimpia = qrCodeMessage.trim();
+      const datos = mapaContenido[urlLimpia];
 
-  if (datos) {
-    cargarContenido(datos);
-  } else {
-    const container = document.getElementById('media-container');
-    const title = document.getElementById('media-title');
-    const wrapper = document.getElementById('player-wrapper');
-    const fsBtn = document.getElementById('fullscreen-btn');
-    const wikiWrapper = document.getElementById('wiki-container');
+      if (datos) {
+        cargarContenido(datos);
+      } else {
+        const container = document.getElementById('media-container');
+        const title = document.getElementById('media-title');
+        const wrapper = document.getElementById('player-wrapper');
+        const fsBtn = document.getElementById('fullscreen-btn');
+        const wikiWrapper = document.getElementById('wiki-container');
 
-    container.style.display = 'block';
-    fsBtn.style.display = 'none';
-    wikiWrapper.innerHTML = '';
-    title.innerText = "Content Not Found";
-    wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
-  }
-}
-
-function cargarContenido(datos) {
-  const container = document.getElementById('media-container');
-  const title = document.getElementById('media-title');
-  const wrapper = document.getElementById('player-wrapper');
-  const fsBtn = document.getElementById('fullscreen-btn');
-  const wikiWrapper = document.getElementById('wiki-container');
-
-  container.style.display = 'block';
-  title.innerText = datos.titulo;
-  wrapper.innerHTML = '';
-  wikiWrapper.innerHTML = '';
-  fsBtn.style.display = 'none';
-
-  if (datos.tipo === "seleccion") {
-    let htmlBotones = '<div style="margin: 15px 0;">';
-    datos.opciones.forEach((opcion) => {
-      htmlBotones += `<button class="btn btn-state-select" onclick='seleccionarOpcion(${JSON.stringify(opcion)})'>${opcion.nombre}</button><br>`;
-    });
-    htmlBotones += '</div>';
-    wrapper.innerHTML = htmlBotones;
-
-  } else if (datos.tipo === "youtube") {
-    wrapper.innerHTML = `<div id="yt-player"></div>`;
-    fsBtn.style.display = 'inline-block';
-    
-    ytPlayer = new YT.Player('yt-player', {
-      height: '220',
-      width: '100%',
-      videoId: datos.id,
-      playerVars: {
-        'autoplay': 1,
-        'playsinline': 1
+        container.style.display = 'block';
+        fsBtn.style.display = 'none';
+        wikiWrapper.innerHTML = '';
+        title.innerText = "Content Not Found";
+        wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
       }
-    });
-
-    if (datos.wiki) {
-      wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
     }
 
-  } else if (datos.tipo === "audio") {
-    wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
+    function cargarContenido(datos) {
+      const container = document.getElementById('media-container');
+      const title = document.getElementById('media-title');
+      const wrapper = document.getElementById('player-wrapper');
+      const fsBtn = document.getElementById('fullscreen-btn');
+      const wikiWrapper = document.getElementById('wiki-container');
 
-    if (datos.wiki) {
-      wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
-    }
-  }
-}
+      container.style.display = 'block';
+      title.innerText = datos.titulo;
+      wrapper.innerHTML = '';
+      wikiWrapper.innerHTML = '';
+      fsBtn.style.display = 'none';
 
-function seleccionarOpcion(opcion) {
-  cargarContenido(opcion);
-}
+      if (datos.tipo === "seleccion") {
+        let htmlBotones = '<div style="margin: 15px 0;">';
+        datos.opciones.forEach((opcion) => {
+          htmlBotones += `<button class="btn btn-state-select" onclick='seleccionarOpcion(${JSON.stringify(opcion)})'>${opcion.nombre}</button><br>`;
+        });
+        htmlBotones += '</div>';
+        wrapper.innerHTML = htmlBotones;
 
-function pantallaCompleta() {
-  const iframe = document.querySelector('#player-wrapper iframe');
-  if (iframe) {
-    if (iframe.requestFullscreen) {
-      iframe.requestFullscreen();
-    } else if (iframe.webkitRequestFullscreen) {
-      iframe.webkitRequestFullscreen();
-    } else if (iframe.msRequestFullscreen) {
-      iframe.msRequestFullscreen();
-    }
-  }
-}
+      } else if (datos.tipo === "youtube") {
+        wrapper.innerHTML = `<div id="yt-player"></div>`;
+        fsBtn.style.display = 'inline-block';
+        
+        ytPlayer = new YT.Player('yt-player', {
+          height: '220',
+          width: '100%',
+          videoId: datos.id,
+          playerVars: {
+            'autoplay': 1,
+            'playsinline': 1
+          }
+        });
 
-async function iniciarEscaner() {
-  document.getElementById('reader').style.display = 'block';
-  document.getElementById('media-container').style.display = 'none';
-  document.getElementById('player-wrapper').innerHTML = '';
-  document.getElementById('wiki-container').innerHTML = '';
-
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("reader");
-  }
-
-  // Detener la cámara previa si estaba activa
-  if (html5QrCode.isScanning) {
-    try {
-      await html5QrCode.stop();
-    } catch (e) {
-      console.warn("No se pudo detener la instancia:", e);
-    }
-  }
-
-  const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
-
-  // Intentar iniciar con la cámara trasera general
-  html5QrCode.start(
-    { facingMode: "environment" },
-    qrConfig,
-    async (decodedText) => {
-      try {
-        await html5QrCode.stop();
-      } catch (e) {}
-      alDetectarQR(decodedText);
-    },
-    (errorMessage) => {
-      // Escaneando cuadros continuamente...
-    }
-  ).then(() => {
-    // Si la cámara inició bien, aplicar el zoom opcionalmente
-    setTimeout(() => {
-      try {
-        const capabilities = html5QrCode.getRunningTrackCapabilities();
-        if (capabilities && capabilities.zoom) {
-          html5QrCode.applyVideoConstraints({
-            advanced: [{ zoom: Math.min(1.5, capabilities.zoom.max) }]
-          });
+        if (datos.wiki) {
+          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
         }
-      } catch (e) {
-        console.log("Zoom no disponible en el dispositivo actual.");
+
+      } else if (datos.tipo === "audio") {
+        wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
+
+        if (datos.wiki) {
+          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
+        }
       }
-    }, 1000);
-  }).catch((err) => {
-    console.error("Error al acceder a la cámara:", err);
-    alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
-  });
-}
+    }
 
-function reiniciarEscaner() {
-  iniciarEscaner();
-}
+    function seleccionarOpcion(opcion) {
+      cargarContenido(opcion);
+    }
 
-window.onload = iniciarEscaner;
+    function pantallaCompleta() {
+      const iframe = document.querySelector('#player-wrapper iframe');
+      if (iframe) {
+        if (iframe.requestFullscreen) {
+          iframe.requestFullscreen();
+        } else if (iframe.webkitRequestFullscreen) {
+          iframe.webkitRequestFullscreen();
+        } else if (iframe.msRequestFullscreen) {
+          iframe.msRequestFullscreen();
+        }
+      }
+    }
+
+    async function iniciarEscaner() {
+      document.getElementById('reader').style.display = 'block';
+      document.getElementById('media-container').style.display = 'none';
+      document.getElementById('player-wrapper').innerHTML = '';
+      document.getElementById('wiki-container').innerHTML = '';
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      if (html5QrCode.isScanning) {
+        try {
+          await html5QrCode.stop();
+        } catch (e) {}
+      }
+
+      const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+      try {
+        // Inicializar cámara trasera predeterminada
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          qrConfig,
+          async (decodedText) => {
+            try { await html5QrCode.stop(); } catch (e) {}
+            alDetectarQR(decodedText);
+          },
+          () => {}
+        );
+
+        // Una vez otorgados permisos, listar cámaras para poblar el selector
+        const devices = await Html5Qrcode.getCameras();
+        const selectElem = document.getElementById('cam-select');
+        
+        if (selectElem && devices && devices.length > 1) {
+          selectElem.innerHTML = '';
+          devices.forEach((cam, idx) => {
+            const option = document.createElement('option');
+            option.value = cam.id;
+            option.text = cam.label || `Cámara ${idx + 1}`;
+            selectElem.appendChild(option);
+          });
+          selectElem.style.display = 'block';
+        }
+
+      } catch (err) {
+        console.error("Error al iniciar el escáner:", err);
+        alert("No se pudo iniciar la cámara. Verifica que tengas conexión HTTPS y permisos concedidos.");
+      }
+    }
+
+    async function cambiarCamara(cameraId) {
+      if (html5QrCode && html5QrCode.isScanning) {
+        await html5QrCode.stop();
+      }
+      
+      html5QrCode.start(
+        cameraId,
+        { fps: 15, qrbox: { width: 250, height: 250 } },
+        async (decodedText) => {
+          try { await html5QrCode.stop(); } catch (e) {}
+          alDetectarQR(decodedText);
+        },
+        () => {}
+      );
+    }
+
+    function reiniciarEscaner() {
+      iniciarEscaner();
+    }
 
     window.onload = iniciarEscaner;
   </script>
