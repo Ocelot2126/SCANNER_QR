@@ -457,33 +457,86 @@
       }
     }
 
-    function iniciarEscaner() {
-      document.getElementById('reader').style.display = 'block';
-      document.getElementById('media-container').style.display = 'none';
-      document.getElementById('player-wrapper').innerHTML = '';
-      document.getElementById('wiki-container').innerHTML = '';
+    // Variable global para controlar la instancia
+let html5QrCode;
 
-      const config = {
-        fps: 30,
-        qrbox: undefined, 
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        },
-        videoConstraints: {
-          facingMode: { exact: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          focusMode: "continuous",
-          advanced: [
-            { zoom: true },
-            { exposureMode: "continuous" }
-          ]
-        }
-      };
+async function iniciarEscaner() {
+  document.getElementById('reader').style.display = 'block';
+  document.getElementById('media-container').style.display = 'none';
+  document.getElementById('player-wrapper').innerHTML = '';
+  document.getElementById('wiki-container').innerHTML = '';
 
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
-      html5QrcodeScanner.render(alDetectarQR);
+  // Si ya existía una instancia activa, la detenemos limpiamente
+  if (html5QrCode) {
+    try {
+      await html5QrCode.stop();
+    } catch (e) {
+      // Ignorar si no estaba corriendo
     }
+  }
+
+  html5QrCode = new Html5Qrcode("reader", {
+    // Activa el detector nativo Chromium si el celular lo soporta
+    useBarCodeDetectorIfSupported: true 
+  });
+
+  // Configuración optimizada para teléfonos modernos
+  const qrConfig = {
+    fps: 15, // Reduce carga de procesamiento en resoluciones altas
+    qrbox: { width: 250, height: 250 },
+    aspectRatio: 1.0
+  };
+
+  // Restricciones estrictas de video para limitar la resolución a 1080p
+  const cameraConstraints = {
+    facingMode: "environment",
+    width: { ideal: 1280, max: 1920 },
+    height: { ideal: 720, max: 1080 }
+  };
+
+  try {
+    await html5QrCode.start(
+      cameraConstraints,
+      qrConfig,
+      (decodedText) => {
+        // Al detectar QR, detenemos la cámara y procesamos la URL
+        html5QrCode.stop().then(() => {
+          alDetectarQR(decodedText);
+        });
+      },
+      (errorMessage) => {
+        // Errores por cuadro no detectado (comportamiento normal)
+      }
+    );
+
+    // --- OPTIMIZACIÓN CLAVE PARA TELÉFONOS NUEVOS ---
+    // Aplicamos zoom de hardware (1.5x) para obligar a usar la distancia focal óptima
+    setTimeout(() => {
+      try {
+        const videoTrack = html5QrCode.getRunningTrackCapabilities();
+        if (videoTrack && videoTrack.zoom) {
+          const targetZoom = Math.min(1.5, videoTrack.zoom.max);
+          html5QrCode.applyVideoConstraints({
+            advanced: [{ zoom: targetZoom }]
+          });
+        }
+      } catch (err) {
+        console.log("Zoom no soportado en este dispositivo:", err);
+      }
+    }, 1000);
+
+  } catch (err) {
+    console.error("Error al iniciar cámara:", err);
+    // Fallback si la cámara trasera no responde con constraints estrictos
+    html5QrCode.start(
+      { facingMode: "environment" },
+      qrConfig,
+      (decodedText) => {
+        html5QrCode.stop().then(() => alDetectarQR(decodedText));
+      }
+    );
+  }
+}
 
     function reiniciarEscaner() {
       iniciarEscaner();
