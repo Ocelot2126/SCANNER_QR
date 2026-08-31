@@ -439,16 +439,19 @@
         html5QrCode = new Html5Qrcode("reader");
       }
 
+      // 1. Detener flujo de cámara previo de forma segura
       if (html5QrCode.isScanning) {
         try {
           await html5QrCode.stop();
-        } catch (e) {}
+        } catch (e) {
+          console.warn("No se pudo detener la cámara activa:", e);
+        }
       }
 
       const qrConfig = { fps: 15, qrbox: { width: 250, height: 250 } };
 
+      // 2. Iniciar la cámara principal directamente (Compatibilidad total con equipos viejos)
       try {
-        // Inicializar cámara trasera predeterminada
         await html5QrCode.start(
           { facingMode: "environment" },
           qrConfig,
@@ -458,8 +461,14 @@
           },
           () => {}
         );
+      } catch (err) {
+        console.error("Error al iniciar cámara primaria:", err);
+        alert("No se pudo acceder a la cámara. Verifica que estés en HTTPS y tengas permisos concedidos.");
+        return;
+      }
 
-        // Una vez otorgados permisos, listar cámaras para poblar el selector
+      // 3. Enumeración segura de cámaras adicionales (Sólo si el dispositivo lo permite)
+      try {
         const devices = await Html5Qrcode.getCameras();
         const selectElem = document.getElementById('cam-select');
         
@@ -472,17 +481,19 @@
             selectElem.appendChild(option);
           });
           selectElem.style.display = 'block';
+        } else if (selectElem) {
+          selectElem.style.display = 'none';
         }
-
-      } catch (err) {
-        console.error("Error al iniciar el escáner:", err);
-        alert("No se pudo iniciar la cámara. Verifica que tengas conexión HTTPS y permisos concedidos.");
+      } catch (e) {
+        console.log("El dispositivo no soporta la lectura de sensores múltiples.");
       }
     }
 
     async function cambiarCamara(cameraId) {
       if (html5QrCode && html5QrCode.isScanning) {
-        await html5QrCode.stop();
+        try {
+          await html5QrCode.stop();
+        } catch (e) {}
       }
       
       html5QrCode.start(
