@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- Librería QrScanner (Nimiq) basada en WebAssembly/Worker -->
+  <script src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body { 
@@ -33,7 +34,6 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
-    /* Estilo para el logo de 3DM */
     .brand-logo {
       width: 140px;
       height: auto;
@@ -49,23 +49,20 @@
       letter-spacing: -0.5px;
     }
 
-    #reader { 
+    #reader-container { 
       width: 100%; 
       border-radius: 12px; 
       overflow: hidden; 
-      border: none !important;
+      background: #000;
+      position: relative;
+      min-height: 250px;
     }
 
-    #cam-select {
+    #reader-video {
       width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      background-color: #f8fafc;
-      font-size: 14px;
-      font-weight: 600;
-      color: #1e293b;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     #media-container { 
@@ -113,7 +110,6 @@
       width: 80%;
     }
 
-    /* Estilo para la selección de estados */
     .btn-state-select {
       background: #0f172a;
       width: 85%;
@@ -128,8 +124,9 @@
     <img src="logo.png" alt="3DM Logo" class="brand-logo">
     <h1>US States History</h1>
     
-    <div id="reader"></div>
-    <select id="cam-select" style="display: none;" onchange="cambiarCamara(this.value)"></select>
+    <div id="reader-container">
+      <video id="reader-video"></video>
+    </div>
 
     <div id="media-container">
       <h2 id="media-title" style="color: #1e293b; font-size: 20px; margin-top: 0;"></h2>
@@ -337,12 +334,15 @@
       }
     };
 
-    let html5QrCode;
-    let ytPlayer;
+    let qrScanner = null;
+    let ytPlayer = null;
 
     function alDetectarQR(qrCodeMessage) {
-      document.getElementById('reader').style.display = 'none';
-      document.getElementById('cam-select').style.display = 'none';
+      if (qrScanner) {
+        qrScanner.stop();
+      }
+
+      document.getElementById('reader-container').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
       const datos = mapaContenido[urlLimpia];
@@ -429,82 +429,36 @@
       }
     }
 
-async function iniciarEscaner() {
-  document.getElementById('reader').style.display = 'block';
-  document.getElementById('media-container').style.display = 'none';
-  document.getElementById('player-wrapper').innerHTML = '';
-  document.getElementById('wiki-container').innerHTML = '';
+    async function iniciarEscaner() {
+      document.getElementById('reader-container').style.display = 'block';
+      document.getElementById('media-container').style.display = 'none';
+      document.getElementById('player-wrapper').innerHTML = '';
+      document.getElementById('wiki-container').innerHTML = '';
 
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("reader");
-  }
+      const videoElem = document.getElementById('reader-video');
 
-  if (html5QrCode.isScanning) {
-    try {
-      await html5QrCode.stop();
-    } catch (e) {
-      console.warn("No se pudo detener la instancia:", e);
-    }
-  }
+      if (!qrScanner) {
+        // Inicialización de QrScanner con detección de zona y resolución completa
+        qrScanner = new QrScanner(
+          videoElem,
+          result => alDetectarQR(result.data),
+          {
+            onDecodeError: error => {}, // ignora los cuadros sin código QR
+            highlightScanRegion: true,  // dibuja la guía visual de escaneo
+            highlightCodeOutline: true, // resalta el código cuando lo encuentra
+            maxScansPerSecond: 15,
+            preferredCamera: 'environment' // elige cámara trasera principal
+          }
+        );
+      }
 
-  const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-
-  // Por defecto, fallback a facingMode por si falla la enumeración
-  let camaraElegida = { facingMode: "environment" };
-
-  try {
-    const camaras = await Html5Qrcode.getCameras();
-    if (camaras && camaras.length) {
-      // Cámaras traseras
-      const traseras = camaras.filter(c => /back|rear|trasera/i.test(c.label));
-      // Preferí la trasera que NO sea ultra wide / macro / tele
-      const principal =
-        traseras.find(c => !/ultra|wide|macro|tele/i.test(c.label)) ||
-        traseras[0] ||
-        camaras[camaras.length - 1]; // heurística: en muchos Android la "principal" queda última en la lista
-
-      if (principal) {
-        camaraElegida = principal.id;
-        console.log("Cámara elegida:", principal.label);
+      try {
+        await qrScanner.start();
+      } catch (err) {
+        console.error("Error al acceder a la cámara:", err);
+        alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
       }
     }
-  } catch (e) {
-    console.warn("No se pudo enumerar cámaras, uso facingMode por defecto:", e);
-  }
-
-  html5QrCode.start(
-    camaraElegida,
-    qrConfig,
-    async (decodedText) => {
-      try {
-        await html5QrCode.stop();
-      } catch (e) {}
-      alDetectarQR(decodedText);
-    },
-    (errorMessage) => {
-      // Escaneando cuadros continuamente...
-    }
-  ).then(() => {
-    setTimeout(() => {
-      try {
-        const capabilities = html5QrCode.getRunningTrackCapabilities();
-        if (capabilities && capabilities.focusMode) {
-          html5QrCode.applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] });
-        }
-        if (capabilities && capabilities.zoom) {
-          html5QrCode.applyVideoConstraints({
-            advanced: [{ zoom: Math.min(1.5, capabilities.zoom.max) }]
-          });
-        }
-      } catch (e) {
-        console.log("Foco/zoom no disponible en el dispositivo actual.");
-      }
-    }, 1000);
-  }).catch((err) => {
-    console.error("Error al acceder a la cámara:", err);
-    alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
-  });
-}
 
     function reiniciarEscaner() {
       iniciarEscaner();
