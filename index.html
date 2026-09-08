@@ -4,15 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
-
-  <!-- Declaración PWA y metadatos mobile -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f172a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="US History QR">
-  <link rel="apple-touch-icon" href="logo.png">
-
   <!-- Librería QrScanner (Nimiq) basada en WebAssembly/Worker -->
   <script src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -74,56 +65,6 @@
       display: block;
     }
 
-    #cam-select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      background-color: #f8fafc;
-      font-size: 14px;
-      font-weight: 600;
-      color: #1e293b;
-      display: none;
-    }
-
-    /* Slider de Zoom */
-    #zoom-controls {
-      display: none;
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(4px);
-      padding: 6px 16px;
-      border-radius: 20px;
-      color: white;
-      font-size: 13px;
-      font-weight: 600;
-      align-items: center;
-      gap: 10px;
-      z-index: 10;
-      width: 80%;
-      box-sizing: border-box;
-    }
-
-    #zoom-slider {
-      flex: 1;
-      accent-color: #2563eb;
-    }
-
-    #fallback-container {
-      margin-top: 12px;
-    }
-
-    .btn-fallback {
-      background: #475569;
-      font-size: 14px;
-      padding: 10px 16px;
-      margin-top: 5px;
-    }
-
     #media-container { 
       margin-top: 20px; 
       display: none; 
@@ -183,25 +124,8 @@
     <img src="logo.png" alt="3DM Logo" class="brand-logo">
     <h1>US States History</h1>
     
-    <div id="scanner-section">
-      <div id="reader-container">
-        <video id="reader-video"></video>
-        <div id="zoom-controls">
-          <span>🔍</span>
-          <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1">
-        </div>
-      </div>
-
-      <!-- Selector manual de cámaras -->
-      <select id="cam-select" onchange="cambiarCamaraManual(this.value)"></select>
-
-      <!-- Opción de respaldo: Sacar foto con la cámara nativa / Galería -->
-      <div id="fallback-container">
-        <button class="btn btn-fallback" onclick="document.getElementById('file-input').click()">
-          📸 Taking photo fails? Scan image
-        </button>
-        <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;" onchange="procesarFotoQR(this)">
-      </div>
+    <div id="reader-container">
+      <video id="reader-video"></video>
     </div>
 
     <div id="media-container">
@@ -412,14 +336,13 @@
 
     let qrScanner = null;
     let ytPlayer = null;
-    let activeVideoTrack = null;
 
     function alDetectarQR(qrCodeMessage) {
       if (qrScanner) {
         qrScanner.stop();
       }
 
-      document.getElementById('scanner-section').style.display = 'none';
+      document.getElementById('reader-container').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
       const datos = mapaContenido[urlLimpia];
@@ -506,163 +429,34 @@
       }
     }
 
-    async function iniciarEscaner(preferredCameraId = null) {
-      document.getElementById('scanner-section').style.display = 'block';
+    async function iniciarEscaner() {
       document.getElementById('reader-container').style.display = 'block';
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
       document.getElementById('wiki-container').innerHTML = '';
-      document.getElementById('zoom-controls').style.display = 'none';
 
       const videoElem = document.getElementById('reader-video');
-      const selectCam = document.getElementById('cam-select');
 
-      // 1. Filtrar sensores fantasma o sin imagen
-      try {
-        const cameras = await QrScanner.listCameras(true);
-        const validCameras = cameras.filter(c => {
-          const label = c.label.toLowerCase();
-          return !label.includes('front') && 
-                 !label.includes('depth') && 
-                 !label.includes('virtual') &&
-                 !label.includes('tof');
-        });
-
-        const targetList = validCameras.length ? validCameras : cameras;
-
-        if (targetList.length > 1) {
-          selectCam.innerHTML = '';
-          targetList.forEach((cam, index) => {
-            const opt = document.createElement('option');
-            opt.value = cam.id;
-            let nombreLimpio = cam.label || `Camera ${index + 1}`;
-            if (/back|rear|trasera/i.test(nombreLimpio)) {
-              nombreLimpio = `Rear Camera ${index + 1}`;
-            }
-            opt.text = nombreLimpio;
-            if (preferredCameraId && cam.id === preferredCameraId) {
-              opt.selected = true;
-            }
-            selectCam.appendChild(opt);
-          });
-          selectCam.style.display = 'block';
-        } else {
-          selectCam.style.display = 'none';
-        }
-
-        if (!preferredCameraId && targetList.length > 0) {
-          const mainCam = targetList.find(c => !/ultra|wide|macro/i.test(c.label)) || targetList[0];
-          preferredCameraId = mainCam.id;
-          selectCam.value = mainCam.id;
-        }
-      } catch (e) {
-        console.warn("Error al listar cámaras:", e);
+      if (!qrScanner) {
+        // Inicialización de QrScanner con detección de zona y resolución completa
+        qrScanner = new QrScanner(
+          videoElem,
+          result => alDetectarQR(result.data),
+          {
+            onDecodeError: error => {}, // ignora los cuadros sin código QR
+            highlightScanRegion: true,  // dibuja la guía visual de escaneo
+            highlightCodeOutline: true, // resalta el código cuando lo encuentra
+            maxScansPerSecond: 15,
+            preferredCamera: 'environment' // elige cámara trasera principal
+          }
+        );
       }
-
-      if (qrScanner) {
-        qrScanner.destroy();
-        qrScanner = null;
-      }
-
-      qrScanner = new QrScanner(
-        videoElem,
-        result => alDetectarQR(result.data),
-        {
-          onDecodeError: error => {},
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-          maxScansPerSecond: 15,
-          preferredCamera: preferredCameraId || 'environment'
-        }
-      );
 
       try {
         await qrScanner.start();
-
-        // 2. Detección automática de cámara congelada/en negro (Watchdog)
-        let frameCheckTimeout = setTimeout(() => {
-          if (videoElem.videoWidth === 0 || videoElem.videoHeight === 0 || videoElem.readyState < 2) {
-            console.warn("Cámara en negro detectada. Cambiando a la siguiente opción...");
-            if (selectCam.options.length > 1) {
-              const currentIdx = selectCam.selectedIndex;
-              selectCam.remove(currentIdx);
-              const nextCamId = selectCam.value;
-              iniciarEscaner(nextCamId);
-            }
-          }
-        }, 1800);
-
-        videoElem.onloadedmetadata = () => {
-          clearTimeout(frameCheckTimeout);
-        };
-
-        // 3. Foco continuo y control de Zoom
-        setTimeout(async () => {
-          try {
-            const stream = videoElem.srcObject;
-            if (!stream) return;
-
-            activeVideoTrack = stream.getVideoTracks()[0];
-            if (!activeVideoTrack) return;
-
-            const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
-            const constraints = { advanced: [] };
-
-            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-              constraints.advanced.push({ focusMode: 'continuous' });
-            }
-
-            if (capabilities.zoom) {
-              const slider = document.getElementById('zoom-slider');
-              slider.min = capabilities.zoom.min || 1;
-              slider.max = Math.min(3, capabilities.zoom.max || 3);
-              slider.step = capabilities.zoom.step || 0.1;
-              
-              const initialZoom = Math.min(1.2, capabilities.zoom.max);
-              slider.value = initialZoom;
-              constraints.advanced.push({ zoom: initialZoom });
-
-              document.getElementById('zoom-controls').style.display = 'flex';
-
-              slider.oninput = async (e) => {
-                if (activeVideoTrack) {
-                  try {
-                    await activeVideoTrack.applyConstraints({
-                      advanced: [{ zoom: parseFloat(e.target.value) }]
-                    });
-                  } catch (err) {}
-                }
-              };
-            }
-
-            if (constraints.advanced.length > 0) {
-              await activeVideoTrack.applyConstraints(constraints);
-            }
-          } catch (e) {
-            console.warn("No se pudieron aplicar restricciones de foco/zoom:", e);
-          }
-        }, 800);
-
       } catch (err) {
         console.error("Error al acceder a la cámara:", err);
-      }
-    }
-
-    function cambiarCamaraManual(cameraId) {
-      iniciarEscaner(cameraId);
-    }
-
-    async function procesarFotoQR(input) {
-      if (input.files && input.files[0]) {
-        try {
-          const file = input.files[0];
-          const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
-          if (result && result.data) {
-            alDetectarQR(result.data);
-          }
-        } catch (err) {
-          alert("No QR code found in the selected image. Please try again with a clearer photo.");
-        }
+        alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
       }
     }
 
@@ -670,16 +464,7 @@
       iniciarEscaner();
     }
 
-    // Registro del Service Worker para PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
-          .catch(err => console.warn('Error al registrar Service Worker:', err));
-      });
-    }
-
-    window.onload = () => iniciarEscaner();
+    window.onload = iniciarEscaner;
   </script>
 </body>
 </html>
