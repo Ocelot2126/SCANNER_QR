@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>US States History</title>
+
+  <!-- Declaración PWA y metadatos mobile -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="US History QR">
+  <link rel="apple-touch-icon" href="logo.png">
+
   <!-- Librería QrScanner (Nimiq) basada en WebAssembly/Worker -->
   <script src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -659,6 +668,15 @@
 
     function reiniciarEscaner() {
       iniciarEscaner();
+    }
+
+    // Registro del Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+          .catch(err => console.warn('Error al registrar Service Worker:', err));
+      });
     }
 
     window.onload = () => iniciarEscaner();
