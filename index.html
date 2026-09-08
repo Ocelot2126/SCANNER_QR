@@ -508,15 +508,29 @@
       const videoElem = document.getElementById('reader-video');
       const selectCam = document.getElementById('cam-select');
 
-      // 1. Poblado de lista de cámaras para el Selector
+      // 1. Filtrar sensores fantasma o sin imagen
       try {
         const cameras = await QrScanner.listCameras(true);
-        if (cameras.length > 1) {
+        const validCameras = cameras.filter(c => {
+          const label = c.label.toLowerCase();
+          return !label.includes('front') && 
+                 !label.includes('depth') && 
+                 !label.includes('virtual') &&
+                 !label.includes('tof');
+        });
+
+        const targetList = validCameras.length ? validCameras : cameras;
+
+        if (targetList.length > 1) {
           selectCam.innerHTML = '';
-          cameras.forEach(cam => {
+          targetList.forEach((cam, index) => {
             const opt = document.createElement('option');
             opt.value = cam.id;
-            opt.text = cam.label || `Camera ${selectCam.options.length + 1}`;
+            let nombreLimpio = cam.label || `Camera ${index + 1}`;
+            if (/back|rear|trasera/i.test(nombreLimpio)) {
+              nombreLimpio = `Rear Camera ${index + 1}`;
+            }
+            opt.text = nombreLimpio;
             if (preferredCameraId && cam.id === preferredCameraId) {
               opt.selected = true;
             }
@@ -527,19 +541,13 @@
           selectCam.style.display = 'none';
         }
 
-        // Selección por defecto de cámara principal si no vino especificada
-        if (!preferredCameraId) {
-          const backCameras = cameras.filter(c => /back|rear|trasera/i.test(c.label));
-          const mainCamera = backCameras.find(c => !/ultra|wide|macro|depth|tele/i.test(c.label)) 
-                          || backCameras[0] 
-                          || cameras[0];
-          if (mainCamera) {
-            preferredCameraId = mainCamera.id;
-            selectCam.value = mainCamera.id;
-          }
+        if (!preferredCameraId && targetList.length > 0) {
+          const mainCam = targetList.find(c => !/ultra|wide|macro/i.test(c.label)) || targetList[0];
+          preferredCameraId = mainCam.id;
+          selectCam.value = mainCam.id;
         }
       } catch (e) {
-        console.warn("No se pudieron enumerar las cámaras:", e);
+        console.warn("Error al listar cámaras:", e);
       }
 
       if (qrScanner) {
@@ -562,7 +570,24 @@
       try {
         await qrScanner.start();
 
-        // 2. Foco continuo y slider de Zoom por hardware
+        // 2. Detección automática de cámara congelada/en negro (Watchdog)
+        let frameCheckTimeout = setTimeout(() => {
+          if (videoElem.videoWidth === 0 || videoElem.videoHeight === 0 || videoElem.readyState < 2) {
+            console.warn("Cámara en negro detectada. Cambiando a la siguiente opción...");
+            if (selectCam.options.length > 1) {
+              const currentIdx = selectCam.selectedIndex;
+              selectCam.remove(currentIdx);
+              const nextCamId = selectCam.value;
+              iniciarEscaner(nextCamId);
+            }
+          }
+        }, 1800);
+
+        videoElem.onloadedmetadata = () => {
+          clearTimeout(frameCheckTimeout);
+        };
+
+        // 3. Foco continuo y control de Zoom
         setTimeout(async () => {
           try {
             const stream = videoElem.srcObject;
@@ -584,7 +609,7 @@
               slider.max = Math.min(3, capabilities.zoom.max || 3);
               slider.step = capabilities.zoom.step || 0.1;
               
-              const initialZoom = Math.min(1.3, capabilities.zoom.max);
+              const initialZoom = Math.min(1.2, capabilities.zoom.max);
               slider.value = initialZoom;
               constraints.advanced.push({ zoom: initialZoom });
 
@@ -605,22 +630,19 @@
               await activeVideoTrack.applyConstraints(constraints);
             }
           } catch (e) {
-            console.warn("No se pudieron aplicar constraints avanzadas:", e);
+            console.warn("No se pudieron aplicar restricciones de foco/zoom:", e);
           }
         }, 800);
 
       } catch (err) {
         console.error("Error al acceder a la cámara:", err);
-        alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
       }
     }
 
-    // Cambiar cámara desde el select desplegable
     function cambiarCamaraManual(cameraId) {
       iniciarEscaner(cameraId);
     }
 
-    // Procesar foto estática sacada con la app nativa o cargada desde la galería
     async function procesarFotoQR(input) {
       if (input.files && input.files[0]) {
         try {
