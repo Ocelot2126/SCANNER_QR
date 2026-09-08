@@ -65,7 +65,20 @@
       display: block;
     }
 
-    /* Slider de Zoom sobre la cámara */
+    #cam-select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background-color: #f8fafc;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      display: none;
+    }
+
+    /* Slider de Zoom */
     #zoom-controls {
       display: none;
       position: absolute;
@@ -89,6 +102,17 @@
     #zoom-slider {
       flex: 1;
       accent-color: #2563eb;
+    }
+
+    #fallback-container {
+      margin-top: 12px;
+    }
+
+    .btn-fallback {
+      background: #475569;
+      font-size: 14px;
+      padding: 10px 16px;
+      margin-top: 5px;
     }
 
     #media-container { 
@@ -150,11 +174,24 @@
     <img src="logo.png" alt="3DM Logo" class="brand-logo">
     <h1>US States History</h1>
     
-    <div id="reader-container">
-      <video id="reader-video"></video>
-      <div id="zoom-controls">
-        <span>🔍</span>
-        <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1">
+    <div id="scanner-section">
+      <div id="reader-container">
+        <video id="reader-video"></video>
+        <div id="zoom-controls">
+          <span>🔍</span>
+          <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1">
+        </div>
+      </div>
+
+      <!-- Selector manual de cámaras -->
+      <select id="cam-select" onchange="cambiarCamaraManual(this.value)"></select>
+
+      <!-- Opción de respaldo: Sacar foto con la cámara nativa / Galería -->
+      <div id="fallback-container">
+        <button class="btn btn-fallback" onclick="document.getElementById('file-input').click()">
+          📸 Taking photo fails? Scan image
+        </button>
+        <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;" onchange="procesarFotoQR(this)">
       </div>
     </div>
 
@@ -373,8 +410,7 @@
         qrScanner.stop();
       }
 
-      document.getElementById('reader-container').style.display = 'none';
-      document.getElementById('zoom-controls').style.display = 'none';
+      document.getElementById('scanner-section').style.display = 'none';
 
       const urlLimpia = qrCodeMessage.trim();
       const datos = mapaContenido[urlLimpia];
@@ -461,7 +497,8 @@
       }
     }
 
-    async function iniciarEscaner() {
+    async function iniciarEscaner(preferredCameraId = null) {
+      document.getElementById('scanner-section').style.display = 'block';
       document.getElementById('reader-container').style.display = 'block';
       document.getElementById('media-container').style.display = 'none';
       document.getElementById('player-wrapper').innerHTML = '';
@@ -469,18 +506,37 @@
       document.getElementById('zoom-controls').style.display = 'none';
 
       const videoElem = document.getElementById('reader-video');
+      const selectCam = document.getElementById('cam-select');
 
-      // 1. Filtrado para elegir la cámara trasera principal (evitando Ultra Wide/Macro)
-      let selectedDeviceId = null;
+      // 1. Poblado de lista de cámaras para el Selector
       try {
         const cameras = await QrScanner.listCameras(true);
-        const backCameras = cameras.filter(c => /back|rear|trasera/i.test(c.label));
-        const mainCamera = backCameras.find(c => !/ultra|wide|macro|depth|tele/i.test(c.label)) 
-                        || backCameras[0] 
-                        || cameras[0];
+        if (cameras.length > 1) {
+          selectCam.innerHTML = '';
+          cameras.forEach(cam => {
+            const opt = document.createElement('option');
+            opt.value = cam.id;
+            opt.text = cam.label || `Camera ${selectCam.options.length + 1}`;
+            if (preferredCameraId && cam.id === preferredCameraId) {
+              opt.selected = true;
+            }
+            selectCam.appendChild(opt);
+          });
+          selectCam.style.display = 'block';
+        } else {
+          selectCam.style.display = 'none';
+        }
 
-        if (mainCamera) {
-          selectedDeviceId = mainCamera.id;
+        // Selección por defecto de cámara principal si no vino especificada
+        if (!preferredCameraId) {
+          const backCameras = cameras.filter(c => /back|rear|trasera/i.test(c.label));
+          const mainCamera = backCameras.find(c => !/ultra|wide|macro|depth|tele/i.test(c.label)) 
+                          || backCameras[0] 
+                          || cameras[0];
+          if (mainCamera) {
+            preferredCameraId = mainCamera.id;
+            selectCam.value = mainCamera.id;
+          }
         }
       } catch (e) {
         console.warn("No se pudieron enumerar las cámaras:", e);
@@ -499,14 +555,14 @@
           highlightScanRegion: true,
           highlightCodeOutline: true,
           maxScansPerSecond: 15,
-          preferredCamera: selectedDeviceId || 'environment'
+          preferredCamera: preferredCameraId || 'environment'
         }
       );
 
       try {
         await qrScanner.start();
 
-        // 2. Configuración de Foco Continuo y Zoom por Hardware
+        // 2. Foco continuo y slider de Zoom por hardware
         setTimeout(async () => {
           try {
             const stream = videoElem.srcObject;
@@ -518,19 +574,16 @@
             const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
             const constraints = { advanced: [] };
 
-            // Forzar autofocus continuo
             if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
               constraints.advanced.push({ focusMode: 'continuous' });
             }
 
-            // Configurar control deslizante si soporta zoom
             if (capabilities.zoom) {
               const slider = document.getElementById('zoom-slider');
               slider.min = capabilities.zoom.min || 1;
               slider.max = Math.min(3, capabilities.zoom.max || 3);
               slider.step = capabilities.zoom.step || 0.1;
               
-              // Inicializar en zoom 1.3x para que el sensor logre foco en modelos tipo S20
               const initialZoom = Math.min(1.3, capabilities.zoom.max);
               slider.value = initialZoom;
               constraints.advanced.push({ zoom: initialZoom });
@@ -552,7 +605,7 @@
               await activeVideoTrack.applyConstraints(constraints);
             }
           } catch (e) {
-            console.warn("Dispositivo no expone controles avanzados de foco/zoom:", e);
+            console.warn("No se pudieron aplicar constraints avanzadas:", e);
           }
         }, 800);
 
@@ -562,11 +615,31 @@
       }
     }
 
+    // Cambiar cámara desde el select desplegable
+    function cambiarCamaraManual(cameraId) {
+      iniciarEscaner(cameraId);
+    }
+
+    // Procesar foto estática sacada con la app nativa o cargada desde la galería
+    async function procesarFotoQR(input) {
+      if (input.files && input.files[0]) {
+        try {
+          const file = input.files[0];
+          const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
+          if (result && result.data) {
+            alDetectarQR(result.data);
+          }
+        } catch (err) {
+          alert("No QR code found in the selected image. Please try again with a clearer photo.");
+        }
+      }
+    }
+
     function reiniciarEscaner() {
       iniciarEscaner();
     }
 
-    window.onload = iniciarEscaner;
+    window.onload = () => iniciarEscaner();
   </script>
 </body>
 </html>
