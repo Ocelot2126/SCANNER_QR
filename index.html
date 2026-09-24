@@ -63,13 +63,6 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      /* Truco para el bug típico de WebView/Android donde el <video> con
-         getUserMedia queda "invisible" hasta que se refresca la página:
-         forzar una capa de composición GPU obliga a repintar apenas
-         llega el primer frame de la cámara. */
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
-      backface-visibility: hidden;
     }
 
     #focus-hint {
@@ -163,7 +156,7 @@
     <h1>US States History</h1>
     
     <div id="reader-container">
-      <video id="reader-video" autoplay muted playsinline></video>
+      <video id="reader-video"></video>
       <div id="focus-ring" class="focus-ring"></div>
       <div id="focus-hint">Tocá la pieza en pantalla si no enfoca</div>
     </div>
@@ -598,20 +591,6 @@
       try {
         await qrScanner.start();
         framesSinLectura = 0;
-
-        // Respaldo extra contra el bug de Android WebView donde el
-        // <video> queda con el último frame en negro/congelado hasta que
-        // se refresca manualmente la página. Forzamos un reflow y un
-        // pequeño "parpadeo" de layout para que el motor repinte ya
-        // teniendo el stream de la cámara activo.
-        void videoElem.offsetHeight;
-        videoElem.style.display = 'none';
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            videoElem.style.display = 'block';
-          });
-        });
-
         // Pequeña espera para asegurarnos que el track ya está activo
         // antes de tocarle las constraints de enfoque.
         setTimeout(() => aplicarEnfoqueContinuo(obtenerTrackActual()), 300);
