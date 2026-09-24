@@ -65,6 +65,37 @@
       display: block;
     }
 
+    #focus-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #fff;
+      font-size: 12px;
+      background: rgba(0,0,0,0.35);
+      padding: 4px 0;
+      pointer-events: none;
+    }
+
+    .focus-ring {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border: 2px solid #22c55e;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(1.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.35s ease;
+    }
+
+    .focus-ring.active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+      transition: opacity 0.1s ease, transform 0.25s ease;
+    }
+
     #media-container { 
       margin-top: 20px; 
       display: none; 
@@ -126,6 +157,8 @@
     
     <div id="reader-container">
       <video id="reader-video"></video>
+      <div id="focus-ring" class="focus-ring"></div>
+      <div id="focus-hint">Tocá la pieza en pantalla si no enfoca</div>
     </div>
 
     <div id="media-container">
@@ -336,6 +369,96 @@
 
     let qrScanner = null;
     let ytPlayer = null;
+    let framesSinLectura = 0;
+    let reenfocando = false;
+
+    // Intenta forzar enfoque continuo apenas arranca la cámara.
+    // Muchos celulares nuevos (sobre todo Samsung/Android 10+) ignoran
+    // el focusMode que pide qr-scanner por defecto y se quedan con el
+    // enfoque fijo del primer frame.
+    async function aplicarEnfoqueContinuo(track) {
+      if (!track || !track.getCapabilities) return;
+      const caps = track.getCapabilities();
+      console.log('Capacidades de cámara:', caps);
+
+      const advanced = [];
+      if (caps.focusMode && caps.focusMode.includes('continuous')) {
+        advanced.push({ focusMode: 'continuous' });
+      }
+      // Un leve zoom digital ayuda a que algunos teléfonos con varias
+      // lentes elijan el sensor principal (con autoenfoque real) en vez
+      // de la lente ultra angular (enfoque fijo), que suele ser la que
+      // se activa por defecto en modo "environment".
+      if (caps.zoom && caps.zoom.min !== undefined) {
+        const zoomSuave = Math.min(caps.zoom.max, caps.zoom.min + (caps.zoom.step || 0.1) * 2);
+        if (zoomSuave > caps.zoom.min) {
+          advanced.push({ zoom: zoomSuave });
+        }
+      }
+
+      if (advanced.length > 0) {
+        try {
+          await track.applyConstraints({ advanced });
+        } catch (e) {
+          console.warn('No se pudo aplicar el enfoque continuo:', e);
+        }
+      }
+    }
+
+    // Fuerza un "reenfoque" manual: apaga y prende el modo de enfoque.
+    // Sirve tanto para el toque en pantalla como para el reintento
+    // automático cuando pasan varios segundos sin leer ningún QR.
+    async function forzarReenfoque(track, punto) {
+      if (!track || !track.getCapabilities || reenfocando) return;
+      reenfocando = true;
+      const caps = track.getCapabilities();
+
+      try {
+        if (caps.focusMode && caps.focusMode.includes('single-shot')) {
+          const constraintAvanzada = { focusMode: 'single-shot' };
+          if (punto && caps.pointsOfInterest) {
+            constraintAvanzada.pointsOfInterest = [punto];
+          }
+          await track.applyConstraints({ advanced: [constraintAvanzada] });
+          // Volvemos a modo continuo (si existe) después del disparo manual.
+          setTimeout(async () => {
+            if (caps.focusMode.includes('continuous')) {
+              try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
+            }
+            reenfocando = false;
+          }, 700);
+        } else if (caps.focusMode && caps.focusMode.includes('continuous')) {
+          // Truco clásico: apagar y volver a prender el enfoque continuo
+          // suele destrabar el autofoco cuando quedó "pegado".
+          await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
+          setTimeout(async () => {
+            try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
+            reenfocando = false;
+          }, 200);
+        } else {
+          reenfocando = false;
+        }
+      } catch (e) {
+        console.warn('No se pudo reenfocar:', e);
+        reenfocando = false;
+      }
+    }
+
+    function mostrarAnilloEnfoque(x, y) {
+      const anillo = document.getElementById('focus-ring');
+      anillo.style.left = x + 'px';
+      anillo.style.top = y + 'px';
+      anillo.classList.remove('active');
+      // Forzar reflow para poder reiniciar la animación.
+      void anillo.offsetWidth;
+      anillo.classList.add('active');
+      setTimeout(() => anillo.classList.remove('active'), 500);
+    }
+
+    function obtenerTrackActual() {
+      const stream = document.getElementById('reader-video').srcObject;
+      return stream ? stream.getVideoTracks()[0] : null;
+    }
 
     function alDetectarQR(qrCodeMessage) {
       if (qrScanner) {
@@ -441,9 +564,22 @@
         // Inicialización de QrScanner con detección de zona y resolución completa
         qrScanner = new QrScanner(
           videoElem,
-          result => alDetectarQR(result.data),
+          result => {
+            framesSinLectura = 0;
+            alDetectarQR(result.data);
+          },
           {
-            onDecodeError: error => {}, // ignora los cuadros sin código QR
+            onDecodeError: error => {
+              // Si pasan ~3 segundos seguidos sin poder leer un QR,
+              // probamos forzar un reenfoque automático (útil en celulares
+              // donde el autofoco se "traba" después del primer frame).
+              framesSinLectura++;
+              if (framesSinLectura === 45) {
+                forzarReenfoque(obtenerTrackActual());
+              } else if (framesSinLectura > 45 && framesSinLectura % 60 === 0) {
+                forzarReenfoque(obtenerTrackActual());
+              }
+            },
             highlightScanRegion: true,  // dibuja la guía visual de escaneo
             highlightCodeOutline: true, // resalta el código cuando lo encuentra
             maxScansPerSecond: 15,
@@ -454,11 +590,32 @@
 
       try {
         await qrScanner.start();
+        framesSinLectura = 0;
+        // Pequeña espera para asegurarnos que el track ya está activo
+        // antes de tocarle las constraints de enfoque.
+        setTimeout(() => aplicarEnfoqueContinuo(obtenerTrackActual()), 300);
       } catch (err) {
         console.error("Error al acceder a la cámara:", err);
         alert("No se pudo acceder a la cámara. Asegurate de estar usando HTTPS y haber concedido permisos.");
       }
     }
+
+    // Toque para enfocar: el usuario toca la zona de la pieza en pantalla
+    // y forzamos un enfoque puntual ahí. Es el respaldo más confiable
+    // cuando el autoenfoque continuo del teléfono no coopera.
+    document.getElementById('reader-container').addEventListener('click', (ev) => {
+      const track = obtenerTrackActual();
+      if (!track) return;
+
+      const rect = ev.currentTarget.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+      mostrarAnilloEnfoque(x, y);
+
+      const puntoNormalizado = { x: x / rect.width, y: y / rect.height };
+      framesSinLectura = 0;
+      forzarReenfoque(track, puntoNormalizado);
+    });
 
     function reiniciarEscaner() {
       iniciarEscaner();
