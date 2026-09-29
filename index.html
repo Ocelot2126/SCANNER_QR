@@ -93,7 +93,7 @@
     .focus-ring.active {
       opacity: 1;
       transform: translate(-50%, -50%) scale(1);
-      transition: opacity 0.1s ease, transform 0.25s ease;
+      transition: opacity 0.10s ease, transform 0.25s ease;
     }
 
     #media-container { 
@@ -510,10 +510,11 @@
     let framesSinLectura = 0;
     let reenfocando = false;
 
-    // Intenta forzar enfoque continuo apenas arranca la cámara.
-    // Muchos celulares nuevos (sobre todo Samsung/Android 10+) ignoran
-    // el focusMode que pide qr-scanner por defecto y se quedan con el
-    // enfoque fijo del primer frame.
+    // --- FUNCIÓN PARA REASEGURAR EL ESTADO DEL HISTORIAL ---
+    function asegurarEstadoHistorial() {
+      history.pushState({ page: 'app' }, '', location.href);
+    }
+
     async function aplicarEnfoqueContinuo(track) {
       if (!track || !track.getCapabilities) return;
       const caps = track.getCapabilities();
@@ -523,10 +524,6 @@
       if (caps.focusMode && caps.focusMode.includes('continuous')) {
         advanced.push({ focusMode: 'continuous' });
       }
-      // Un leve zoom digital ayuda a que algunos teléfonos con varias
-      // lentes elijan el sensor principal (con autoenfoque real) en vez
-      // de la lente ultra angular (enfoque fijo), que suele ser la que
-      // se activa por defecto en modo "environment".
       if (caps.zoom && caps.zoom.min !== undefined) {
         const zoomSuave = Math.min(caps.zoom.max, caps.zoom.min + (caps.zoom.step || 0.1) * 2);
         if (zoomSuave > caps.zoom.min) {
@@ -543,9 +540,6 @@
       }
     }
 
-    // Fuerza un "reenfoque" manual: apaga y prende el modo de enfoque.
-    // Sirve tanto para el toque en pantalla como para el reintento
-    // automático cuando pasan varios segundos sin leer ningún QR.
     async function forzarReenfoque(track, punto) {
       if (!track || !track.getCapabilities || reenfocando) return;
       reenfocando = true;
@@ -558,7 +552,6 @@
             constraintAvanzada.pointsOfInterest = [punto];
           }
           await track.applyConstraints({ advanced: [constraintAvanzada] });
-          // Volvemos a modo continuo (si existe) después del disparo manual.
           setTimeout(async () => {
             if (caps.focusMode.includes('continuous')) {
               try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
@@ -566,8 +559,6 @@
             reenfocando = false;
           }, 700);
         } else if (caps.focusMode && caps.focusMode.includes('continuous')) {
-          // Truco clásico: apagar y volver a prender el enfoque continuo
-          // suele destrabar el autofoco cuando quedó "pegado".
           await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
           setTimeout(async () => {
             try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
@@ -587,7 +578,6 @@
       anillo.style.left = x + 'px';
       anillo.style.top = y + 'px';
       anillo.classList.remove('active');
-      // Forzar reflow para poder reiniciar la animación.
       void anillo.offsetWidth;
       anillo.classList.add('active');
       setTimeout(() => anillo.classList.remove('active'), 500);
@@ -622,6 +612,7 @@
         wikiWrapper.innerHTML = '';
         title.innerText = "Content Not Found";
         wrapper.innerHTML = `<p style="color: #64748b;">The scanned QR (${urlLimpia}) is not registered.</p>`;
+        asegurarEstadoHistorial();
       }
     }
 
@@ -645,6 +636,7 @@
         });
         htmlBotones += '</div>';
         wrapper.innerHTML = htmlBotones;
+        asegurarEstadoHistorial();
 
       } else if (datos.tipo === "youtube") {
         wrapper.innerHTML = `<div id="yt-player"></div>`;
@@ -657,6 +649,12 @@
           playerVars: {
             'autoplay': 1,
             'playsinline': 1
+          },
+          events: {
+            'onReady': function() {
+              // Reasegura el historial cuando el iframe de YouTube se incrusta por completo
+              asegurarEstadoHistorial();
+            }
           }
         });
 
@@ -670,6 +668,7 @@
         if (datos.wiki) {
           wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
         }
+        asegurarEstadoHistorial();
       }
     }
 
@@ -699,7 +698,6 @@
       const videoElem = document.getElementById('reader-video');
 
       if (!qrScanner) {
-        // Inicialización de QrScanner con detección de zona y resolución completa
         qrScanner = new QrScanner(
           videoElem,
           result => {
@@ -708,9 +706,6 @@
           },
           {
             onDecodeError: error => {
-              // Si pasan ~3 segundos seguidos sin poder leer un QR,
-              // probamos forzar un reenfoque automático (útil en celulares
-              // donde el autofoco se "traba" después del primer frame).
               framesSinLectura++;
               if (framesSinLectura === 45) {
                 forzarReenfoque(obtenerTrackActual());
@@ -718,10 +713,10 @@
                 forzarReenfoque(obtenerTrackActual());
               }
             },
-            highlightScanRegion: true,  // dibuja la guía visual de escaneo
-            highlightCodeOutline: true, // resalta el código cuando lo encuentra
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
             maxScansPerSecond: 15,
-            preferredCamera: 'environment' // elige cámara trasera principal
+            preferredCamera: 'environment'
           }
         );
       }
@@ -729,8 +724,6 @@
       try {
         await qrScanner.start();
         framesSinLectura = 0;
-        // Pequeña espera para asegurarnos que el track ya está activo
-        // antes de tocarle las constraints de enfoque.
         setTimeout(() => aplicarEnfoqueContinuo(obtenerTrackActual()), 300);
       } catch (err) {
         console.error("Error al acceder a la cámara:", err);
@@ -738,9 +731,6 @@
       }
     }
 
-    // Toque para enfocar: el usuario toca la zona de la pieza en pantalla
-    // y forzamos un enfoque puntual ahí. Es el respaldo más confiable
-    // cuando el autoenfoque continuo del teléfono no coopera.
     document.getElementById('reader-container').addEventListener('click', (ev) => {
       const track = obtenerTrackActual();
       if (!track) return;
@@ -759,16 +749,12 @@
       iniciarEscaner();
     }
 
-    window.onload = iniciarEscaner;
+    window.onload = function() {
+      iniciarEscaner();
+      asegurarEstadoHistorial();
+    };
 
     // --- MANEJO DEL BOTÓN ATRÁS EN LA WEB ---
-    function asegurarEstadoHistorial() {
-      history.pushState({ page: 'app' }, '', location.href);
-    }
-
-    // Inicializar el estado en la pila de historial
-    asegurarEstadoHistorial();
-
     window.addEventListener('popstate', (event) => {
       const mediaContainer = document.getElementById('media-container');
 
@@ -783,10 +769,8 @@
       const confirmExit = window.confirm("Are you sure you want to leave this page?");
       
       if (confirmExit) {
-        // Cierra o limpia la vista web de forma segura
         window.location.href = "about:blank";
       } else {
-        // Reinserta el estado en el historial para que vuelva a interceptar si vuelve a presionar Atrás
         asegurarEstadoHistorial();
       }
     });
