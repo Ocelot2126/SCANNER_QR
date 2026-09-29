@@ -760,27 +760,36 @@
     }
 
     window.onload = iniciarEscaner;
-    // Prevenir la navegación hacia atrás sin confirmación
-history.pushState(null, null, location.href);
 
-window.addEventListener('popstate', () => {
-  const mediaContainer = document.getElementById('media-container');
-  
-  // Si está viendo un resultado, al tocar "atrás" vuelve al escáner
-  if (mediaContainer && mediaContainer.style.display === 'block') {
-    reiniciarEscaner();
-    history.pushState(null, null, location.href);
-    return;
-  }
+    // --- MANEJO DEL BOTÓN ATRÁS EN LA WEB ---
+    function asegurarEstadoHistorial() {
+      history.pushState({ page: 'app' }, '', location.href);
+    }
 
-  // Si está en la pantalla principal, pregunta si desea salir
-  const confirmExit = window.confirm("Are you sure you want to leave this page?");
-  if (confirmExit) {
-    history.back(); // Permite la salida real
-  } else {
-    history.pushState(null, null, location.href); // Mantiene al usuario en la app
-  }
-});
+    // Inicializar el estado en la pila de historial
+    asegurarEstadoHistorial();
+
+    window.addEventListener('popstate', (event) => {
+      const mediaContainer = document.getElementById('media-container');
+
+      // 1. Si está viendo el contenido/video de un estado, volver al escáner
+      if (mediaContainer && mediaContainer.style.display === 'block') {
+        reiniciarEscaner();
+        asegurarEstadoHistorial();
+        return;
+      }
+
+      // 2. Si está en la pantalla principal, preguntar antes de salir
+      const confirmExit = window.confirm("Are you sure you want to leave this page?");
+      
+      if (confirmExit) {
+        // Cierra o limpia la vista web de forma segura
+        window.location.href = "about:blank";
+      } else {
+        // Reinserta el estado en el historial para que vuelva a interceptar si vuelve a presionar Atrás
+        asegurarEstadoHistorial();
+      }
+    });
   </script>
 </body>
 </html>
