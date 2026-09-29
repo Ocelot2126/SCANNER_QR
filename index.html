@@ -760,6 +760,27 @@
     }
 
     window.onload = iniciarEscaner;
+    // Prevenir la navegación hacia atrás sin confirmación
+history.pushState(null, null, location.href);
+
+window.addEventListener('popstate', () => {
+  const mediaContainer = document.getElementById('media-container');
+  
+  // Si está viendo un resultado, al tocar "atrás" vuelve al escáner
+  if (mediaContainer && mediaContainer.style.display === 'block') {
+    reiniciarEscaner();
+    history.pushState(null, null, location.href);
+    return;
+  }
+
+  // Si está en la pantalla principal, pregunta si desea salir
+  const confirmExit = window.confirm("Are you sure you want to leave this page?");
+  if (confirmExit) {
+    history.back(); // Permite la salida real
+  } else {
+    history.pushState(null, null, location.href); // Mantiene al usuario en la app
+  }
+});
   </script>
 </body>
 </html>
