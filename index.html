@@ -141,6 +141,17 @@
       width: 80%;
     }
 
+    .btn-amazon {
+      background: #eab308;
+      color: #0f172a;
+      margin-top: 10px;
+      width: 80%;
+    }
+
+    .btn-amazon:hover {
+      background: #ca8a04;
+    }
+
     .btn-state-select {
       background: #0f172a;
       width: 85%;
@@ -658,16 +669,22 @@
           }
         });
 
+        let botonesHTML = '';
         if (datos.wiki) {
-          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
+          botonesHTML += `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a><br>`;
         }
+        botonesHTML += `<a href="https://www.amazon.com/dp/B0F9ZM1Z1X" target="_blank" class="btn btn-amazon">Get More 3D Puzzles 🧩</a>`;
+        wikiWrapper.innerHTML = botonesHTML;
 
       } else if (datos.tipo === "audio") {
         wrapper.innerHTML = `<audio controls autoplay src="${datos.url}"></audio>`;
 
+        let botonesHTML = '';
         if (datos.wiki) {
-          wikiWrapper.innerHTML = `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a>`;
+          botonesHTML += `<a href="${datos.wiki}" target="_blank" class="btn btn-wiki">Read on Wikipedia 📖</a><br>`;
         }
+        botonesHTML += `<a href="https://www.amazon.com/dp/B0F9ZM1Z1X" target="_blank" class="btn btn-amazon">Get More 3D Puzzles 🧩</a>`;
+        wikiWrapper.innerHTML = botonesHTML;
         asegurarEstadoHistorial();
       }
     }
